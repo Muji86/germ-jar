@@ -2,7 +2,7 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Germ Jar</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M32 4c11 0 17 6 22 12s7 13 5 21-4 15-12 19-17 6-25 2S6 46 5 36s2-18 8-24S21 4 32 4z%22 fill=%22%234fd36a%22 stroke=%22%231d7a33%22 stroke-width=%223%22/%3E%3Cellipse cx=%2220%22 cy=%2217%22 rx=%227%22 ry=%224%22 fill=%22%23fff%22 opacity=%22.45%22 transform=%22rotate%28-30 20 17%29%22/%3E%3Ccircle cx=%2223%22 cy=%2229%22 r=%227%22 fill=%22%23fff%22/%3E%3Ccircle cx=%2241%22 cy=%2229%22 r=%227%22 fill=%22%23fff%22/%3E%3Ccircle cx=%2224%22 cy=%2230%22 r=%223.6%22 fill=%22%2317172b%22/%3E%3Ccircle cx=%2242%22 cy=%2230%22 r=%223.6%22 fill=%22%2317172b%22/%3E%3Cpath d=%22M23 42q9 8 18 0%22 stroke=%22%2317172b%22 stroke-width=%223.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
 <style>
@@ -26,6 +26,16 @@
   #pinInput{font:inherit;font-size:2rem;width:12rem;text-align:center;padding:.3em;border-radius:14px;border:0;margin:.4rem 0}
   #bar{position:fixed;right:1.2rem;bottom:1.2rem;display:flex;gap:.5rem;transition:opacity .6s}
   #bar.hide{opacity:0;pointer-events:none}
+  @media (max-width:640px){
+    #bar{left:.5rem;right:.5rem;bottom:.6rem;justify-content:center;flex-wrap:wrap;gap:.35rem}
+    #bar button{font-size:.9rem;padding:.55em .9em}
+    .card{padding:1.4rem 1.2rem}
+    .card.wide{width:94vw}
+    #grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+    #bannerText{font-size:1.1rem}
+    #banner canvas{width:56px;height:56px}
+    #banner{width:max-content;max-width:92vw}
+  }
   #bar button{background:rgba(44,74,110,.85)}
   .overlay{position:fixed;inset:0;background:rgba(5,12,24,.78);display:flex;align-items:center;justify-content:center;z-index:5}
   .card{background:#14263d;border-radius:28px;padding:2rem 2.5rem;max-width:34rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
@@ -384,7 +394,8 @@ let rawLvl = 0, lvl = 0;
 async function startMic() {
   if (DEMO) return;   // no mic and no sound in demo mode, so it can run without a click
   ac = ac || new AudioContext();
-  await ac.resume();
+  // Don't wait for this: Chrome only lets audio start soon after a click, and a click anywhere wakes it (below)
+  ac.resume().catch(() => {});
   if (stream) stream.getTracks().forEach(t => t.stop());
   const base = {echoCancellation:false, noiseSuppression:false, autoGainControl:false};
   try {
@@ -518,6 +529,8 @@ document.querySelectorAll('.overlay').forEach(o => {
   o.addEventListener('pointerdown', e => { downOnBackdrop = e.target === o; });
   o.addEventListener('click', e => { if (e.target === o && downOnBackdrop) o.classList.add('hidden'); downOnBackdrop = false; });
 });
+// If Chrome hasn't let the audio start yet the mic reads silence, so nothing grows until it's really listening
+const listening = () => DEMO || (ac && ac.state === 'running');
 const modalOpen = () => ['settings', 'collection', 'shelf', 'jarView', 'pinBox'].some(id => !$(id).classList.contains('hidden'));
 
 // Moves a list of germs about inside a dish of radius 1: wandering, blinking, growing and not overlapping.
@@ -558,7 +571,7 @@ function update(dt) {
   if (S.today.date !== todayStr()) S.today = {date:todayStr(), secs:0};
 
   const goal = S.settings.goal;
-  const active = running && !paused && !calib && !celebrate && !modalOpen() && focused();
+  const active = running && !paused && !calib && !celebrate && !modalOpen() && focused() && listening();
   if (active) {
     const over = lvl - goal;
     // Short bangs are ignored: noise has to stay over the goal for a few seconds (quicker if very loud).
@@ -578,7 +591,7 @@ function update(dt) {
       S.splitProg += dt; S.calmTotal += dt; S.today.secs += dt;
       if (S.splitProg >= S.settings.pace) { S.splitProg = 0; split(); }
     }
-  } else if (!running || paused || !focused()) { startled = false; pressure = 0; }
+  } else if (!running || paused || !focused() || !listening()) { startled = false; pressure = 0; }
   nervous = startled ? 1 : clamp(pressure / 3, 0, 1);
   hideAmt += ((startled ? 1 : 0) - hideAmt) * (1 - Math.exp(-4 * dt));
 
@@ -1031,13 +1044,46 @@ function drawDish(c, cx, cy, R) {
   c.lineWidth = R * 0.01; c.strokeStyle = 'rgba(255,255,255,0.15)'; c.beginPath(); c.arc(cx, cy, R * 0.955, 0, TAU); c.stroke();
 }
 
+// Where everything goes. Wide screens (a TV) keep the dish in the middle with the list on the left and
+// the meter on the right; tall screens (a phone) stack header, meter, dish, status, list and jars.
+function layout() {
+  const portrait = H > W * 1.1;
+  if (!portrait) {
+    const cx = W * 0.46, cy = H * 0.46, R = Math.min(W * 0.33, H * 0.38), pad = W * 0.03;
+    const rh = Math.min(H * 0.046, 44), jw = Math.max(26, H * 0.045);
+    return {portrait, cx, cy, R, pad, small:H * 0.026,
+      head:{title:H * 0.055, titleY:H * 0.09, name:H * 0.034, nameY:H * 0.14, statY:H * 0.18},
+      meter:{x:W * 0.86, y:H * 0.18, w:Math.max(26, W * 0.028), h:H * 0.56, across:false},
+      list:{x:pad, y:H * 0.3, h:H * 0.44, rh, cols:1, colW:Math.max(120, cx - R * 1.12 - pad)},
+      shelf:{labelX:pad, labelY:H * 0.80, x:pad, y:H * 0.92, jw, count:6, box:[0, H * 0.76, W * 0.3, H]},
+      status:{y:cy + R * 1.08 + H * 0.075, size:H * 0.042, maxW:W * 0.5}};
+  }
+  const bar = $('bar').getBoundingClientRect();   // leave room for the buttons, however many rows they take
+  const pad = W * 0.05, small = Math.min(W * 0.04, 18), barH = bar.height ? H - bar.top + 6 : 64;
+  const title = Math.min(W * 0.085, 40), titleY = pad + title, nameY = titleY + title * 0.75, statY = nameY + small * 1.5;
+  const meterY = statY + small * 1.2, meterH = Math.max(12, W * 0.03);
+  const statusSize = Math.min(W * 0.06, 28), rh = Math.min(W * 0.075, 36);
+  const jw = Math.min(34, W * 0.08), shelfY = H - barH - small * 0.6, shelfTop = shelfY - jw * 1.45;
+  // the dish gets whatever height is left after the header, status line, two list rows and the jars
+  const below = statusSize * 2.2 + rh * 3.2 + (H - shelfTop) + small;
+  const R = clamp(Math.min(W * 0.42, (H - (meterY + meterH + small) - below) / 2.36), 60, W * 0.42);
+  const cy = meterY + meterH + small + R * 1.18, cx = W / 2;
+  const statusY = cy + R * 1.08 + statusSize * 1.5, listY = statusY + statusSize * 0.9 + rh * 0.6;
+  return {portrait, cx, cy, R, pad, small,
+    head:{title, titleY, name:title * 0.6, nameY, statY},
+    meter:{x:pad + small * 3.6, y:meterY, w:W - pad * 2 - small * 3.6, h:meterH, across:true},
+    list:{x:pad, y:listY, h:Math.max(0, shelfTop - listY - small), rh, cols:2, colW:(W - pad * 2) / 2},
+    shelf:{labelX:pad, labelY:shelfY - jw * 0.45, x:pad + small * 6.2, y:shelfY, jw, count:Math.max(1, Math.floor((W - pad * 2 - small * 6.2) / (jw * 1.3))), box:[0, shelfTop, W, shelfY + 4]},
+    status:{y:statusY, size:statusSize, maxW:W - pad * 2}};
+}
+
 function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const bg = ctx.createRadialGradient(W * 0.45, H * 0.45, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.8);
   bg.addColorStop(0, '#173052'); bg.addColorStop(1, '#070f1c');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  const cx = W * 0.46, cy = H * 0.46, R = Math.min(W * 0.33, H * 0.38);
+  const L = layout(), {cx, cy, R} = L, font = getComputedStyle(document.body).fontFamily;
   drawDish(ctx, cx, cy, R);
 
   // progress ring: time until the next split
@@ -1076,63 +1122,66 @@ function draw() {
     }
   }
 
-  // noise meter
-  const mx = W * 0.86, mw = Math.max(26, W * 0.028), mt = H * 0.18, mh = H * 0.56;
-  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.roundRect(mx, mt, mw, mh, mw / 2); ctx.fill();
-  const fh = mh * clamp(lvl / 100, 0, 1);
+  // noise meter: down the right side on a wide screen, across the top on a tall one
+  const m = L.meter, frac = clamp(lvl / 100, 0, 1), goalFrac = S.settings.goal / 100;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.roundRect(m.x, m.y, m.w, m.h, Math.min(m.w, m.h) / 2); ctx.fill();
   ctx.fillStyle = startled ? '#ff5f6d' : lvl > S.settings.goal ? '#ffb347' : '#5fe08a';
-  ctx.save(); ctx.beginPath(); ctx.roundRect(mx, mt, mw, mh, mw / 2); ctx.clip();
-  ctx.fillRect(mx, mt + mh - fh, mw, fh); ctx.restore();
-  const gy = mt + mh * (1 - S.settings.goal / 100);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
-  ctx.beginPath(); ctx.moveTo(mx - 12, gy); ctx.lineTo(mx + mw + 12, gy); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.font = `bold ${Math.round(H * 0.026)}px ${getComputedStyle(document.body).fontFamily}`;
-  ctx.fillText('Noise', mx + mw / 2, mt - H * 0.025);
+  ctx.save(); ctx.beginPath(); ctx.roundRect(m.x, m.y, m.w, m.h, Math.min(m.w, m.h) / 2); ctx.clip();
+  if (m.across) ctx.fillRect(m.x, m.y, m.w * frac, m.h); else ctx.fillRect(m.x, m.y + m.h * (1 - frac), m.w, m.h * frac);
+  ctx.restore();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.beginPath();
+  if (m.across) { const gx = m.x + m.w * goalFrac; ctx.moveTo(gx, m.y - 8); ctx.lineTo(gx, m.y + m.h + 8); }
+  else { const gy = m.y + m.h * (1 - goalFrac); ctx.moveTo(m.x - 12, gy); ctx.lineTo(m.x + m.w + 12, gy); }
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.font = `bold ${Math.round(L.small)}px ${font}`;
+  if (m.across) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('Noise', L.pad, m.y + m.h / 2); }
+  else { ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('Noise', m.x + m.w / 2, m.y - L.small); }
+  ctx.textBaseline = 'alphabetic';
 
-  const font = getComputedStyle(document.body).fontFamily;
   // title and stats
+  const hd = L.head;
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#b8f5c8'; ctx.font = `bold ${Math.round(H * 0.055)}px ${font}`;
-  ctx.fillText('Germ Jar', W * 0.03, H * 0.09);
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(H * 0.026)}px ${font}`;
-  ctx.fillText(`Calm today: ${Math.floor(S.today.secs / 60)} min`, W * 0.03, H * 0.18);
-  ctx.fillStyle = '#ffd88a'; ctx.font = `bold ${Math.round(H * 0.034)}px ${font}`;
-  ctx.fillText(player() ? player().name : '', W * 0.03, H * 0.14);
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(H * 0.026)}px ${font}`;
-  ctx.fillText(`Germs: ${units()} / ${CAP}`, W * 0.03, H * 0.22);
+  ctx.fillStyle = '#b8f5c8'; ctx.font = `bold ${Math.round(hd.title)}px ${font}`;
+  ctx.fillText('Germ Jar', L.pad, hd.titleY);
+  ctx.fillStyle = '#ffd88a'; ctx.font = `bold ${Math.round(hd.name)}px ${font}`;
+  ctx.fillText(player() ? player().name : '', L.pad, hd.nameY);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(L.small)}px ${font}`;
+  const calmTxt = `Calm today: ${Math.floor(S.today.secs / 60)} min`, germTxt = `Germs: ${units()} / ${CAP}`;
+  if (L.portrait) ctx.fillText(`${calmTxt}    ${germTxt}`, L.pad, hd.statY, W - L.pad * 2);
+  else { ctx.fillText(calmTxt, L.pad, hd.statY); ctx.fillText(germTxt, L.pad, hd.statY + L.small * 1.55); }
 
   // what's in the jar right now, rarest first
   const tally = {};
   for (const g of G) { const e = tally[g.type] || (tally[g.type] = {n:0, m:0}); if (g.mega) e.m++; else e.n++; }
   const rows = Object.entries(tally).sort((a, b) => RANK.indexOf(BY_ID[b[0]].rarity) - RANK.indexOf(BY_ID[a[0]].rarity)
     || (b[1].n + 3 * b[1].m) - (a[1].n + 3 * a[1].m));
-  const lx = W * 0.03, rh = Math.min(H * 0.046, 44), top = H * 0.3, colW = Math.max(120, cx - R * 1.12 - lx);
-  const fit = Math.max(1, Math.floor((H * 0.74 - top) / rh)), shown = rows.length > fit ? rows.slice(0, fit - 1) : rows;
+  const li = L.list, rh = li.rh, perCol = Math.floor(li.h / rh), fit = perCol * li.cols;
+  const shown = !fit ? [] : rows.length > fit ? rows.slice(0, fit - 1) : rows;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = `bold ${Math.round(rh * 0.42)}px ${font}`;
-  ctx.fillText('In the jar', lx, top - rh * 0.55);
+  if (fit) ctx.fillText('In the jar', li.x, li.y - rh * 0.55);
+  const slot = i => [li.x + Math.floor(i / perCol) * li.colW, li.y + (i % perCol) * rh + rh / 2];
   shown.forEach(([type, e], i) => {
-    const T = BY_ID[type], y = top + i * rh + rh / 2;
-    drawGerm(ctx, lx + rh * 0.4, y, rh * 0.32, type, t, {phase:1, mega:e.m > 0});
+    const T = BY_ID[type], [x, y] = slot(i);
+    drawGerm(ctx, x + rh * 0.4, y, rh * 0.32, type, t, {phase:1, mega:e.m > 0});
     ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(rh * 0.48)}px ${font}`;
-    const count = `${e.n + e.m}`;
-    ctx.fillText(count, lx + rh * 0.95, y);
-    const nx = lx + rh * 0.95 + ctx.measureText('00').width + rh * 0.2;
+    ctx.fillText(`${e.n + e.m}`, x + rh * 0.95, y);
+    const nx = x + rh * 0.95 + ctx.measureText('00').width + rh * 0.2;
     ctx.fillStyle = RARITY_COL[T.rarity]; ctx.font = `${Math.round(rh * 0.46)}px ${font}`;
-    ctx.fillText(T.name + (e.m ? ` (${e.m} MEGA)` : ''), nx, y, lx + colW - nx);
+    ctx.fillText(T.name + (e.m ? ` (${e.m} MEGA)` : ''), nx, y, Math.max(20, x + li.colW - nx - rh * 0.2));
   });
-  if (shown.length < rows.length) {
+  if (fit && shown.length < rows.length) {
+    const [x, y] = slot(shown.length);
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = `${Math.round(rh * 0.42)}px ${font}`;
-    ctx.fillText(`+ ${rows.length - shown.length} more kinds`, lx, top + shown.length * rh + rh / 2);
+    ctx.fillText(`+ ${rows.length - shown.length} more kinds`, x, y);
   }
   ctx.textBaseline = 'alphabetic';
 
   // shelf of full jars
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(H * 0.026)}px ${font}`;
-  ctx.fillText(`Full jars: ${S.jars.length}`, W * 0.03, H * 0.80);
-  const jw = Math.max(26, H * 0.045), recent = S.jars.slice(-6);
-  recent.forEach((j, i) => drawJar(ctx, W * 0.03 + jw / 2 + i * jw * 1.3, H * 0.92, jw, j.counts, j.megas));
+  const sh = L.shelf;
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(L.small)}px ${font}`; ctx.textAlign = 'left';
+  ctx.fillText(`Full jars: ${S.jars.length}`, sh.labelX, sh.labelY);
+  S.jars.slice(-sh.count).forEach((j, i) => drawJar(ctx, sh.x + sh.jw / 2 + i * sh.jw * 1.3, sh.y, sh.jw, j.counts, j.megas));
 
   // status
   let msg = 'Shh... the germs are growing';
@@ -1141,12 +1190,16 @@ function draw() {
   else if (celebrate) msg = 'The jar is full! Amazing calm!';
   else if (paused) msg = 'Paused';
   else if (!focused()) msg = 'Paused in the background';
+  else if (!listening()) msg = 'Tap anywhere to start listening';
   else if (startled && poppedThisTime) msg = poppedThisTime === 1 ? 'Too loud! A germ popped!' : `Too loud! ${poppedThisTime} germs popped!`;
   else if (startled) msg = 'Too loud! The germs are hiding';
   else if (nervous > 0.35) msg = 'Getting noisy... the germs are nervous';
   ctx.textAlign = 'center'; ctx.fillStyle = startled ? '#ffb0b8' : '#ffffff';
-  ctx.font = `bold ${Math.round(H * 0.042)}px ${font}`;
-  ctx.fillText(msg, cx, cy + R * 1.08 + H * 0.075);
+  let fs = L.status.size;
+  ctx.font = `bold ${Math.round(fs)}px ${font}`;
+  const tw = ctx.measureText(msg).width;
+  if (tw > L.status.maxW) { fs *= L.status.maxW / tw; ctx.font = `bold ${Math.round(fs)}px ${font}`; }
+  ctx.fillText(msg, cx, L.status.y);
 
   for (const c of confetti) {
     ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.globalAlpha = clamp(c.life, 0, 1);
@@ -1233,9 +1286,12 @@ async function hashPin(pin) {
   const h = await crypto.subtle.digest('SHA-256', data);
   return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
-function askPin(title, msg = '') {
+addEventListener('pointerdown', () => { if (ac && ac.state === 'suspended') ac.resume().catch(() => {}); });
+const askPin = (title, msg = '') => askText(title, msg, true);
+function askText(title, msg = '', secret = false) {
   return new Promise(resolve => {
     $('pinTitle').textContent = title; $('pinMsg').textContent = msg; $('pinInput').value = '';
+    $('pinInput').type = secret ? 'password' : 'text'; $('pinInput').maxLength = 20;
     $('pinBox').classList.remove('hidden'); $('pinInput').focus();
     const done = v => { $('pinBox').classList.add('hidden'); $('pinOk').onclick = $('pinCancel').onclick = $('pinInput').onkeydown = null; resolve(v); };
     $('pinOk').onclick = () => done($('pinInput').value);
@@ -1353,7 +1409,8 @@ $('jvBack').onclick = openShelf;
 $('bJars').onclick = openShelf;
 cv.addEventListener('click', e => {
   // clicking the little jars in the corner opens the shelf
-  if (running && e.clientX < W * 0.3 && e.clientY > H * 0.76) openShelf();
+  const [x0, y0, x1, y1] = layout().shelf.box;
+  if (running && e.clientX >= x0 && e.clientX <= x1 && e.clientY >= y0 && e.clientY <= y1) openShelf();
 });
 $('bSettings').onclick = openSettings;
 $('bCollection').onclick = openCollection;
@@ -1399,7 +1456,7 @@ function showPlayers() {
 }
 $('bNewPlayer').onclick = async () => {
   if (!(await unlock('Password to make a new player'))) return;
-  const name = (prompt("What's the new player's name?") || '').trim();
+  const name = ((await askText("What's the new player's name?")) || '').trim();
   if (!name) return;
   save();
   const id = 'p' + Date.now();
@@ -1440,7 +1497,10 @@ if (DEMO) {
 } else showPlayers();
 
 let lastMove = performance.now();
-addEventListener('mousemove', () => lastMove = performance.now());
+addEventListener('pointermove', () => lastMove = performance.now());
+addEventListener('pointerdown', () => lastMove = performance.now());
+const touchOnly = matchMedia('(hover: none)').matches;   // phones and tablets: keep the buttons showing
+if (!document.fullscreenEnabled) $('bFull').classList.add('hidden');
 addEventListener('beforeunload', save);
 setInterval(save, 5000);
 
@@ -1448,7 +1508,7 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
   update(dt); draw(); drawBanner(now); drawView(dt);
-  const idle = now - lastMove > 4000 && !modalOpen() && running;
+  const idle = !touchOnly && now - lastMove > 4000 && !modalOpen() && running;
   $('bar').classList.toggle('hide', idle);
   document.body.classList.toggle('nocursor', idle);
   if (!$('settings').classList.contains('hidden')) {
