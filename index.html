@@ -1054,7 +1054,7 @@ function layout() {
     return {portrait, cx, cy, R, pad, small:H * 0.026,
       head:{title:H * 0.055, titleY:H * 0.09, name:H * 0.034, nameY:H * 0.14, statY:H * 0.18},
       meter:{x:W * 0.86, y:H * 0.18, w:Math.max(26, W * 0.028), h:H * 0.56, across:false},
-      list:{x:pad, y:H * 0.3, h:H * 0.44, rh, cols:1, colW:Math.max(120, cx - R * 1.12 - pad)},
+      list:{x:pad, y:H * 0.3, h:H * 0.44, rh, cols:1, colW:Math.max(120, cx - R * 1.12 - pad), box:[0, H * 0.3 - rh, cx - R * 1.1, H * 0.74]},
       shelf:{labelX:pad, labelY:H * 0.80, x:pad, y:H * 0.92, jw, count:6, box:[0, H * 0.76, W * 0.3, H]},
       status:{y:cy + R * 1.08 + H * 0.075, size:H * 0.042, maxW:W * 0.5}};
   }
@@ -1062,7 +1062,7 @@ function layout() {
   const pad = W * 0.05, small = Math.min(W * 0.04, 18), barH = bar.height ? H - bar.top + 6 : 64;
   const title = Math.min(W * 0.085, 40), titleY = pad + title, nameY = titleY + title * 0.75, statY = nameY + small * 1.5;
   const meterY = statY + small * 1.2, meterH = Math.max(12, W * 0.03);
-  const statusSize = Math.min(W * 0.06, 28), rh = Math.min(W * 0.075, 36);
+  const statusSize = Math.min(W * 0.06, 28), rh = Math.min(W * 0.064, 30);
   const jw = Math.min(34, W * 0.08), shelfY = H - barH - small * 0.6, shelfTop = shelfY - jw * 1.45;
   // the dish gets whatever height is left after the header, status line, two list rows and the jars
   const below = statusSize * 2.2 + rh * 3.2 + (H - shelfTop) + small;
@@ -1072,7 +1072,7 @@ function layout() {
   return {portrait, cx, cy, R, pad, small,
     head:{title, titleY, name:title * 0.6, nameY, statY},
     meter:{x:pad + small * 3.6, y:meterY, w:W - pad * 2 - small * 3.6, h:meterH, across:true},
-    list:{x:pad, y:listY, h:Math.max(0, shelfTop - listY - small), rh, cols:2, colW:(W - pad * 2) / 2},
+    list:{x:pad, y:listY, h:Math.max(0, shelfTop - listY - small * 0.3), rh, cols:2, colW:(W - pad * 2) / 2, box:[0, listY - rh, W, shelfTop - small * 0.5]},
     shelf:{labelX:pad, labelY:shelfY - jw * 0.45, x:pad + small * 6.2, y:shelfY, jw, count:Math.max(1, Math.floor((W - pad * 2 - small * 6.2) / (jw * 1.3))), box:[0, shelfTop, W, shelfY + 4]},
     status:{y:statusY, size:statusSize, maxW:W - pad * 2}};
 }
@@ -1159,7 +1159,7 @@ function draw() {
   const shown = !fit ? [] : rows.length > fit ? rows.slice(0, fit - 1) : rows;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = `bold ${Math.round(rh * 0.42)}px ${font}`;
-  if (fit) ctx.fillText('In the jar', li.x, li.y - rh * 0.55);
+  if (fit) ctx.fillText(rows.length > 1 ? `In the jar (${touchOnly ? 'tap' : 'click'} for all)` : 'In the jar', li.x, li.y - rh * 0.55);
   const slot = i => [li.x + Math.floor(i / perCol) * li.colW, li.y + (i % perCol) * rh + rh / 2];
   shown.forEach(([type, e], i) => {
     const T = BY_ID[type], [x, y] = slot(i);
@@ -1173,7 +1173,7 @@ function draw() {
   if (fit && shown.length < rows.length) {
     const [x, y] = slot(shown.length);
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = `${Math.round(rh * 0.42)}px ${font}`;
-    ctx.fillText(`+ ${rows.length - shown.length} more kinds`, x, y);
+    ctx.fillText(`+ ${rows.length - shown.length} more, ${touchOnly ? 'tap' : 'click'} to see all`, x, y, li.colW - rh * 0.2);
   }
   ctx.textBaseline = 'alphabetic';
 
@@ -1373,14 +1373,24 @@ function openShelf() {
 }
 let view = null;
 function openJar(i) {
-  const j = S.jars[i], germs = [];
-  const megas = j.megas || {};
+  const j = S.jars[i];
+  showJar({title:`Jar ${i + 1}, filled ${niceDate(j.date)}`, counts:j.counts, megas:j.megas || {}, dish:true});
+}
+// Everything in the jar being filled now, for when the list on the main screen can't fit it all
+function openJarNow() {
+  const counts = {}, megas = {};
+  G.forEach(g => { const o = g.mega ? megas : counts; o[g.type] = (o[g.type] || 0) + 1; });
+  showJar({title:`In the jar right now: ${units()} / ${CAP}`, counts, megas, dish:false});
+}
+function showJar({title, counts, megas, dish}) {
+  const j = {counts}, germs = [];
   for (const [list, mega] of [[j.counts, false], [megas, true]])
     for (const [type, n] of Object.entries(list)) for (let k = 0; k < n; k++) { const [x, y] = randomSpot(); const g = makeGerm(BY_ID[type] ? type : 'blob', x, y); g.mega = mega; germs.push(g); }
-  view = {germs};
+  view = dish ? {germs} : null;
   const size = Math.min(0.3, Math.sqrt(0.52 / Math.max(unitsOf(germs), 1)));
   for (let k = 0; k < 240; k++) stepGerms(germs, 1 / 60, size, {growing:true, hide:0, dance:false});
-  $('jvTitle').textContent = `Jar ${i + 1}, filled ${niceDate(j.date)}`;
+  $('jvTitle').textContent = title;
+  $('jvCanvas').classList.toggle('hidden', !dish); $('jvBack').classList.toggle('hidden', !dish);
   const tally = $('jvTally'); tally.innerHTML = '';
   [...new Set([...Object.keys(j.counts), ...Object.keys(megas)])].filter(type => BY_ID[type]).map(type => [type, j.counts[type] || 0])
     .sort((a, b) => RANK.indexOf(BY_ID[b[0]].rarity) - RANK.indexOf(BY_ID[a[0]].rarity) || (megas[b[0]] || 0) - (megas[a[0]] || 0) || b[1] - a[1])
@@ -1408,6 +1418,8 @@ function drawView(dt) {
 $('jvBack').onclick = openShelf;
 $('bJars').onclick = openShelf;
 cv.addEventListener('click', e => {
+  const [lx0, ly0, lx1, ly1] = layout().list.box;
+  if (running && e.clientX >= lx0 && e.clientX <= lx1 && e.clientY >= ly0 && e.clientY <= ly1) { openJarNow(); return; }
   // clicking the little jars in the corner opens the shelf
   const [x0, y0, x1, y1] = layout().shelf.box;
   if (running && e.clientX >= x0 && e.clientX <= x1 && e.clientY >= y0 && e.clientY <= y1) openShelf();
@@ -1492,6 +1504,7 @@ if (DEMO) {
     if (params.get('open') === 'collection') openCollection();
     if (params.get('open') === 'settings') openSettings();
     if (params.get('open') === 'shelf') openShelf();
+    if (params.get('open') === 'now') openJarNow();
     if (params.get('open') === 'jar' && S.jars.length) openJar(S.jars.length - 1);
   });
 } else showPlayers();
