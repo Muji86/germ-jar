@@ -1,0 +1,5 @@
+# Private to one home setup
+.deploy.env
+PI_SETUP.md
+germ-jar-ca.crt
+.DS_Store

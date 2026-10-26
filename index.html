@@ -1,0 +1,1466 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Germ Jar</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22%3E%3Cpath d=%22M32 4c11 0 17 6 22 12s7 13 5 21-4 15-12 19-17 6-25 2S6 46 5 36s2-18 8-24S21 4 32 4z%22 fill=%22%234fd36a%22 stroke=%22%231d7a33%22 stroke-width=%223%22/%3E%3Cellipse cx=%2220%22 cy=%2217%22 rx=%227%22 ry=%224%22 fill=%22%23fff%22 opacity=%22.45%22 transform=%22rotate%28-30 20 17%29%22/%3E%3Ccircle cx=%2223%22 cy=%2229%22 r=%227%22 fill=%22%23fff%22/%3E%3Ccircle cx=%2241%22 cy=%2229%22 r=%227%22 fill=%22%23fff%22/%3E%3Ccircle cx=%2224%22 cy=%2230%22 r=%223.6%22 fill=%22%2317172b%22/%3E%3Ccircle cx=%2242%22 cy=%2230%22 r=%223.6%22 fill=%22%2317172b%22/%3E%3Cpath d=%22M23 42q9 8 18 0%22 stroke=%22%2317172b%22 stroke-width=%223.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+<style>
+  html,body{margin:0;height:100%;background:#0b1626;overflow:hidden;color:#fff;user-select:none;
+    font-family:"Segoe UI Rounded","Comic Sans MS","Chalkboard SE","Segoe UI",system-ui,sans-serif}
+  body.nocursor{cursor:none}
+  canvas#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+  button{font:inherit;cursor:pointer;border:0;border-radius:999px;padding:.55em 1.2em;
+    background:#2c4a6e;color:#fff;font-size:1rem}
+  button:hover{background:#3b6293}
+  button.on{background:#3fae6a}
+  button.big{font-size:2rem;padding:.5em 2em;background:#3fae6a;margin:.5em 0}
+  button.big:hover{background:#4fc77c}
+  button.danger{background:#8a3346}
+  #players{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin:.6rem 0 1rem}
+  #players button{font-size:1.7rem;padding:.35em 1.3em;background:#3fae6a;line-height:1.15}
+  #players button:hover{background:#4fc77c}
+  #players small{display:block;font-size:.8rem;opacity:.85}
+  .hidden{display:none!important}
+  #pinBox{z-index:7}
+  #pinInput{font:inherit;font-size:2rem;width:12rem;text-align:center;padding:.3em;border-radius:14px;border:0;margin:.4rem 0}
+  #bar{position:fixed;right:1.2rem;bottom:1.2rem;display:flex;gap:.5rem;transition:opacity .6s}
+  #bar.hide{opacity:0;pointer-events:none}
+  #bar button{background:rgba(44,74,110,.85)}
+  .overlay{position:fixed;inset:0;background:rgba(5,12,24,.78);display:flex;align-items:center;justify-content:center;z-index:5}
+  .card{background:#14263d;border-radius:28px;padding:2rem 2.5rem;max-width:34rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .card.wide .x{position:sticky;top:0;float:right;margin:-.6rem -1rem 0 0;width:2.6rem;height:2.6rem;padding:0;
+    font-size:1.2rem;line-height:2.6rem;text-align:center;background:#2c4a6e;z-index:1;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .card.wide .x:hover{background:#3b6293}
+  .card.wide{width:min(52rem,90vw);max-width:none;box-sizing:border-box;max-height:86vh;overflow:auto;text-align:left}
+  .card h1{font-size:3.2rem;margin:.1em 0;color:#b8f5c8}
+  .card h2{margin-top:0;color:#b8f5c8}
+  .card h3{margin:.2em 0 .5em;font-size:1.05rem;color:#cfe3ff}
+  .card p{line-height:1.45}
+  .small{font-size:.9rem;opacity:.75}
+  .err{color:#ff9aa8}
+  section{margin:0 0 1.4rem}
+  .seg{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
+  input[type=range]{width:100%}
+  select{font:inherit;padding:.4em;border-radius:10px;max-width:100%}
+  .live{display:flex;align-items:center;gap:1rem;margin:.4rem 0 .8rem}
+  #liveBar{position:relative;flex:1;height:18px;border-radius:9px;background:#0b1626;overflow:hidden}
+  #liveFill{position:absolute;left:0;top:0;bottom:0;background:#3fae6a;width:0}
+  #liveGoal{position:absolute;top:0;bottom:0;width:3px;background:#fff}
+  #liveText{min-width:11rem;font-size:.95rem}
+  #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem;margin:1rem 0}
+  .ghead{grid-column:1/-1;margin:.8rem 0 0}
+  #shelfGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:1rem;margin:1rem 0}
+  .jarcard{background:#0e1d31;border-radius:18px;padding:.6rem;text-align:center;cursor:pointer;color:#fff;font:inherit}
+  .jarcard:hover{background:#1b3150}
+  .jarcard canvas{width:90px;height:110px;display:block;margin:0 auto}
+  .jarcard .nm{font-weight:bold}
+  .jarcard .dt{font-size:.8rem;opacity:.75}
+  .jvbody{display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin:1rem 0}
+  #jvCanvas{width:min(56vh,80vw);height:min(56vh,80vw)}
+  #jvTally{flex:1;min-width:14rem;display:flex;flex-direction:column;gap:.2rem}
+  .tally{display:flex;align-items:center;gap:.6rem}
+  .tally canvas{width:44px;height:44px}
+  .tally .cnt{margin-left:auto;font-weight:bold;font-size:1.2rem;white-space:nowrap}
+  .germcard{background:#0e1d31;border-radius:18px;padding:.6rem;text-align:center}
+  .germcard canvas{width:120px;height:120px}
+  .germcard .nm{font-weight:bold}
+  .germcard .rar{font-size:.8rem;opacity:.85}
+  #banner{position:fixed;left:50%;top:5vh;transform:translate(-50%,-30px);opacity:0;transition:all .5s;
+    display:flex;align-items:center;gap:1rem;background:rgba(20,38,61,.95);padding:.6rem 2rem .6rem .8rem;
+    border-radius:999px;box-shadow:0 10px 40px rgba(0,0,0,.5);z-index:4;pointer-events:none}
+  #banner.show{opacity:1;transform:translate(-50%,0)}
+  #banner canvas{width:80px;height:80px}
+  #bannerText{font-size:1.8rem;font-weight:bold}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="banner"><canvas id="bannerGerm" width="160" height="160"></canvas><div id="bannerText"></div></div>
+
+<div id="bar">
+  <button id="bPause">Pause</button>
+  <button id="bCollection">Collection</button>
+  <button id="bJars">Jars</button>
+  <button id="bSettings">Settings</button>
+  <button id="bFull">Full screen</button>
+</div>
+
+<div id="start" class="overlay">
+  <div class="card">
+    <h1>Germ Jar</h1>
+    <p>Keep the room calm and quiet and the germs will grow and multiply.
+       Fill the jar and see if you can find all the rare germs!</p>
+    <h3 id="whoText">Who's playing?</h3>
+    <div id="players"></div>
+    <button id="bNewPlayer">+ New player</button>
+    <p class="small">The browser will ask to use the microphone. It only listens for how loud the room is.
+       Nothing is recorded or sent anywhere.</p>
+    <p id="startErr" class="err"></p>
+  </div>
+</div>
+
+<div id="settings" class="overlay hidden">
+  <div class="card wide">
+    <button class="close x" aria-label="Close">&#x2715;</button>
+    <h2>Settings</h2>
+    <section>
+      <h3>Player</h3>
+      <p id="playerText" class="small"></p>
+      <button id="bSwitch">Switch player</button>
+      <button id="bRename">Rename</button>
+      <p id="pinPlayRow"><label><input type="checkbox" id="pinPlayChk"> Ask for the password to play as this player</label></p>
+    </section>
+    <section>
+      <h3>Password</h3>
+      <p id="lockText" class="small"></p>
+      <button id="bSetPin">Set password</button>
+      <button id="bClearPin">Remove password</button>
+    </section>
+    <section>
+      <h3>How quiet does it need to be?</h3>
+      <div class="seg" id="segGoal">
+        <button data-p="whisper">Whisper</button>
+        <button data-p="calm">Calm</button>
+        <button data-p="chatty">Chatty</button>
+      </div>
+      <label>Fine tune <input type="range" id="goalRange" min="5" max="95" step="1"></label>
+      <div class="live"><div id="liveBar"><div id="liveFill"></div><div id="liveGoal"></div></div><span id="liveText"></span></div>
+      <button id="bCalib">Measure the room</button> <span id="calibText" class="small"></span>
+      <p class="small">Measure the room when it is at its normal quiet (TV off). The goals are set from that.</p>
+    </section>
+    <section>
+      <h3>How fast do the germs grow?</h3>
+      <div class="seg" id="segPace">
+        <button data-s="40">Slow</button>
+        <button data-s="20">Normal</button>
+        <button data-s="10">Fast</button>
+        <button data-s="1">Test (super fast)</button>
+      </div>
+      <p id="paceText" class="small"></p>
+    </section>
+    <section>
+      <h3>What happens when it gets too loud?</h3>
+      <div class="seg" id="segLoud">
+        <button data-l="pop">Germs pop</button>
+        <button data-l="hide">Germs just hide</button>
+      </div>
+      <p class="small">Pop: one germ pops straight away and another every few seconds while it stays loud. One germ always survives.
+        Hide: the germs stop growing until it is quiet again.</p>
+    </section>
+    <section>
+      <h3>Birthday month</h3>
+      <select id="bdaySel"></select>
+      <p class="small">Birthday germs only appear in this player's birthday month.</p>
+    </section>
+    <section>
+      <h3>Microphone</h3>
+      <select id="micSel"></select>
+    </section>
+    <section>
+      <h3>Sounds</h3>
+      <label><input type="checkbox" id="soundChk"> Play little sounds when germs split</label>
+    </section>
+    <section>
+      <button id="bNewJar">Start a new jar</button>
+      <button id="bReset" class="danger">Reset this player</button>
+      <button id="bDelete" class="danger">Delete this player</button>
+    </section>
+    <button class="close on">Done</button>
+  </div>
+</div>
+
+<div id="shelf" class="overlay hidden">
+  <div class="card wide">
+    <button class="close x" aria-label="Close">&#x2715;</button>
+    <h2>Jar shelf</h2>
+    <p id="shelfStats"></p>
+    <div id="shelfGrid"></div>
+    <button class="close on">Close</button>
+  </div>
+</div>
+
+<div id="jarView" class="overlay hidden">
+  <div class="card wide">
+    <button class="close x" aria-label="Close">&#x2715;</button>
+    <h2 id="jvTitle"></h2>
+    <div class="jvbody"><canvas id="jvCanvas"></canvas><div id="jvTally"></div></div>
+    <button id="jvBack">Back to the shelf</button>
+    <button class="close on">Close</button>
+  </div>
+</div>
+
+<div id="pinBox" class="overlay hidden">
+  <div class="card">
+    <h2 id="pinTitle"></h2>
+    <input id="pinInput" type="password" autocomplete="off">
+    <p id="pinMsg" class="err"></p>
+    <button id="pinOk" class="on">OK</button>
+    <button id="pinCancel">Cancel</button>
+  </div>
+</div>
+
+<div id="collection" class="overlay hidden">
+  <div class="card wide">
+    <button class="close x" aria-label="Close">&#x2715;</button>
+    <h2>Germ collection</h2>
+    <p id="collStats"></p>
+    <div id="grid"></div>
+    <button class="close on">Close</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const TAU = Math.PI * 2;
+const CAP = 64;          // germs in a full jar
+const MUTATE = 0.15;     // chance a split makes a different kind of germ
+const KEY = 'germjar.v1';
+const OFFSETS = {whisper: 6, calm: 12, chatty: 22};
+const params = new URLSearchParams(location.search);
+const DEMO = params.has('demo');
+
+const TYPES = [
+  {id:'blob',    name:'Blobby',      hue:125, rarity:'common',     w:30},
+  {id:'bloop',   name:'Bloop',       hue:205, rarity:'common',     w:30},
+  {id:'pinky',   name:'Pinky',       hue:330, rarity:'common',     w:30},
+  {id:'spotty',  name:'Spotty',      hue:42,  rarity:'uncommon',   w:12, spots:true},
+  {id:'stripy',  name:'Stripy',      hue:275, rarity:'uncommon',   w:12, stripes:true},
+  {id:'spiky',   name:'Spiky',       hue:12,  rarity:'uncommon',   w:12, spikes:true},
+  {id:'fuzzy',   name:'Fuzzy',       hue:170, rarity:'rare',       w:5,  fuzz:true},
+  {id:'cyclops', name:'Cyclops',     hue:90,  rarity:'rare',       w:5,  oneEye:true},
+  {id:'glowy',   name:'Glowy',       hue:188, rarity:'rare',       w:5,  glow:true},
+  {id:'party',   name:'Party Germ',  hue:300, rarity:'epic',       w:2,  hat:true},
+  {id:'golden',  name:'Golden Germ', hue:46,  rarity:'legendary',  w:0.7, gold:true},
+  {id:'king',    name:'King Germ',   hue:0,   rarity:'legendary',  w:0.5, crown:true},
+  {id:'rainbow', name:'Rainbow Germ', hue:0,  rarity:'mythic',     w:0.15, rainbow:true, glow:true},
+  {id:'cosmic',  name:'Cosmic Germ', hue:250, rarity:'mythic',     w:0.15, cosmic:true, glow:true, sat:55, lit:22},
+  // Seasonal germs only appear in their months (1 = January). Weights are boosted in season.
+  {id:'pumpkin', name:'Pumpkin Germ', hue:28, rarity:'uncommon',  w:12, season:'Halloween', months:[10], pumpkin:true, sat:95},
+  {id:'mummy',   name:'Mummy Germ',  hue:42,  rarity:'rare',       w:5,  season:'Halloween', months:[10], mummy:true, sat:22, lit:74},
+  {id:'witchy',  name:'Witchy',      hue:88, sat:58, rarity:'rare',       w:5,  season:'Halloween', months:[10], witch:true},
+  {id:'franken', name:'Frankengerm', hue:140, rarity:'epic',       w:2,  season:'Halloween', months:[10], franken:true, sat:40, lit:52},
+  {id:'vampire', name:'Vampire Germ', hue:270, rarity:'legendary', w:0.6, season:'Halloween', months:[10], vampire:true, sat:25, lit:80},
+  {id:'sparkler', name:'Sparkler Germ', hue:50, sat:90, lit:60, rarity:'uncommon', w:12, season:'Bonfire Night', months:[11], sparkler:true},
+  {id:'toffee',  name:'Toffee Apple Germ', hue:355, sat:75, lit:48, rarity:'rare', w:5, season:'Bonfire Night', months:[11], toffee:true},
+  {id:'rocket',  name:'Rocket Germ', hue:215, sat:65, lit:55, rarity:'epic',      w:2,  season:'Bonfire Night', months:[11], rocket:true},
+  {id:'firework', name:'Firework Germ', hue:265, sat:45, lit:24, rarity:'legendary', w:0.6, season:'Bonfire Night', months:[11], firework:true},
+  {id:'snowman', name:'Snowman Germ', hue:205, sat:30, lit:90, rarity:'uncommon', w:12, season:'Christmas', months:[12], snowman:true},
+  {id:'elf',     name:'Elf Germ',    hue:25, sat:65, lit:76,  rarity:'rare',       w:5,  season:'Christmas', months:[12], elf:true},
+  {id:'reindeer', name:'Reindeer Germ', hue:25, sat:45, lit:42, rarity:'rare',     w:5,  season:'Christmas', months:[12], reindeer:true},
+  {id:'ginger',  name:'Gingerbread Germ', hue:28, sat:62, lit:46, rarity:'epic',   w:2,  season:'Christmas', months:[12], ginger:true},
+  {id:'santa',   name:'Santa Germ',  hue:20, sat:65, lit:78,  rarity:'legendary',  w:0.6, season:'Christmas', months:[12], santa:true},
+  {id:'egg',     name:'Easter Egg Germ', hue:190, sat:60, lit:76, rarity:'uncommon', w:12, season:'Easter', months:[3, 4], egg:true},
+  {id:'bunny',   name:'Bunny Germ',  hue:30, sat:12, lit:88,  rarity:'rare',       w:5,  season:'Easter', months:[3, 4], bunny:true},
+  {id:'chick',   name:'Chick Germ',  hue:52, sat:95, lit:62,  rarity:'epic',       w:2,  season:'Easter', months:[3, 4], chick:true},
+  {id:'goldegg', name:'Golden Egg Germ', hue:46, rarity:'legendary', w:0.6, season:'Easter', months:[3, 4], gold:true, egg:true},
+  // Birthday germs appear in the player's birthday month, set in Settings
+  {id:'present', name:'Present Germ', hue:200, sat:70, lit:55, rarity:'rare',      w:5,  season:'Birthday', months:'birthday', present:true},
+  {id:'cake',    name:'Birthday Germ', hue:330, sat:70, lit:72, rarity:'epic',     w:2,  season:'Birthday', months:'birthday', cake:true},
+];
+const BY_ID = Object.fromEntries(TYPES.map(t => [t.id, t]));
+const RARE = new Set(['rare', 'epic', 'legendary', 'mythic']);
+const SEASON_BOOST = 3;
+const month = () => +params.get('month') || new Date().getMonth() + 1;
+const monthsOf = T => T.months === 'birthday' ? (S.settings.birthday ? [S.settings.birthday] : []) : T.months;
+const inSeason = T => !T.months || monthsOf(T).includes(month());
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a = 0, b = 1) => a + Math.random() * (b - a);
+const todayStr = () => new Date().toLocaleDateString('en-CA');
+const $ = id => document.getElementById(id);
+
+// ---------- players and saved state ----------
+// Each player has their own save (germs, jars, collection and settings) under germjar.p.<id>.
+const PKEY = 'germjar.players';
+function fresh(settings) {
+  return {v:1, germs:[{type:'blob', age:99}], splitProg:0, calmTotal:0,
+    today:{date:todayStr(), secs:0}, jars:[], found:{blob:1}, megas:{},
+    settings:Object.assign({base:30, goal:42, preset:'calm', pace:20, sound:true, deviceId:'', calibrated:false, loud:'pop', birthday:0}, settings || {})};
+}
+function store(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function fetchJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function loadPlayers() {
+  let p = fetchJSON(PKEY);
+  if (p && Array.isArray(p.list)) return p;
+  p = {list:[], current:null};
+  const old = fetchJSON(KEY);   // the single save from before there were players
+  if (old && old.v === 1) { const id = 'p' + Date.now(); store('germjar.p.' + id, old); p.list.push({id, name:'Player 1'}); p.current = id; }
+  store(PKEY, p);
+  return p;
+}
+const P = DEMO ? {list:[{id:'demo', name:'Demo'}], current:'demo'} : loadPlayers();
+const player = () => P.list.find(x => x.id === P.current);
+function loadSave(id) {
+  const s = DEMO ? null : fetchJSON('germjar.p.' + id);
+  if (s && s.v === 1) { s.settings = Object.assign(fresh().settings, s.settings); s.megas = s.megas || {}; return s; }
+  return null;
+}
+let S = fresh(), G = [];
+if (DEMO) { S.settings.calibrated = true; S.settings.pace = 1.2; }
+function save() {
+  if (DEMO || !player()) return;
+  S.germs = G.map(g => ({type:g.type, age:Math.round(g.age), mega:g.mega ? 1 : 0}));
+  store('germjar.p.' + P.current, S);
+}
+
+// ---------- germs ----------
+function randomSpot() { const a = rand(0, TAU), d = Math.sqrt(Math.random()) * 0.7; return [Math.cos(a) * d, Math.sin(a) * d]; }
+function makeGerm(type, x, y) {
+  return {type, x, y, vx:0, vy:0, r:0.1, age:99, phase:rand(0, TAU), wa:rand(0, TAU),
+    blinkT:rand(1, 5), blink:0, look:{x:0, y:0}, lookT:0, splitT:0, partner:null};
+}
+function usePlayer(id) {
+  P.current = id;
+  if (!DEMO) store(PKEY, P);
+  // a new player keeps the room and mic settings but starts at normal speed
+  const {base, goal, preset, deviceId, calibrated, sound, loud} = S.settings;
+  S = loadSave(id) || fresh({base, goal, preset, deviceId, calibrated, sound, loud});
+  G = S.germs.map(sg => { const [x, y] = randomSpot(); const g = makeGerm(sg.type, x, y); g.age = sg.age; g.mega = !!sg.mega; return g; });
+  if (!G.length) G = [makeGerm('blob', 0, 0)];
+  celebrate = null; merge = null; ghosts = []; bursts = []; startled = false; pressure = 0; calib = null;
+}
+const unitsOf = list => list.reduce((a, g) => a + (g.mega ? 3 : 1), 0);   // a MEGA germ fills three places in the jar
+const units = () => unitsOf(G);
+
+function pickMutant(not) {
+  const pool = TYPES.filter(t => t.id !== not && inSeason(t));
+  const w = t => t.months ? t.w * SEASON_BOOST : t.w;
+  let n = Math.random() * pool.reduce((a, t) => a + w(t), 0);
+  for (const t of pool) { n -= w(t); if (n <= 0) return t.id; }
+  return pool[0].id;
+}
+
+function split() {
+  if (units() >= CAP) return;
+  const pool = G.filter(g => !g.mega && !g.merging);
+  if (!pool.length) return;
+  const grown = pool.filter(g => g.age > 4), from = grown.length ? grown : pool;
+  const p = from[Math.floor(Math.random() * from.length)];
+  const mutated = Math.random() < MUTATE;
+  const type = mutated ? pickMutant(p.type) : p.type;
+  const a = rand(0, TAU), ux = Math.cos(a), uy = Math.sin(a);
+  const c = makeGerm(type, p.x + ux * 0.01, p.y + uy * 0.01);
+  c.age = 0; p.age = 0;
+  c.vx = ux * 0.28; c.vy = uy * 0.28; p.vx -= ux * 0.28; p.vy -= uy * 0.28;
+  c.splitT = 0.7; c.partner = p;
+  G.push(c);
+  const isNew = !S.found[type];
+  S.found[type] = (S.found[type] || 0) + 1;
+  const T = BY_ID[type];
+  if (isNew) { banner(`New germ found: ${T.name}!`, type); chime(); }
+  else if (mutated && RARE.has(T.rarity)) { banner(`A ${T.name} appeared!`, type); chime(); }
+  else pop();
+  if (units() >= CAP) jarFull();
+  save();
+}
+
+let celebrate = null;
+function jarFull() {
+  const counts = {}, megas = {};
+  G.forEach(g => { const o = g.mega ? megas : counts; o[g.type] = (o[g.type] || 0) + 1; });
+  S.jars.push({date:todayStr(), counts, megas});
+  if (DEMO) console.log('JARSTAT megas=' + Object.values(megas).reduce((x, y) => x + y, 0));
+  celebrate = {t:10};
+  spawnConfetti();
+  fanfare();
+  banner('The jar is full! Brilliant!', G[0].type);
+  save();
+}
+function newJar() {
+  celebrate = null; merge = null;
+  const normal = G.filter(g => !g.mega);
+  const keep = normal[Math.floor(Math.random() * normal.length)] || G[0] || makeGerm('blob', 0, 0);
+  G = [makeGerm(keep.type, 0, 0)];
+  S.splitProg = S.settings.pace * 0.5;
+  save();
+}
+
+// ---------- microphone ----------
+let ac = null, analyser = null, buf = null, stream = null;
+let rawLvl = 0, lvl = 0;
+async function startMic() {
+  if (DEMO) return;   // no mic and no sound in demo mode, so it can run without a click
+  ac = ac || new AudioContext();
+  await ac.resume();
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  const base = {echoCancellation:false, noiseSuppression:false, autoGainControl:false};
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:S.settings.deviceId ? {...base, deviceId:{exact:S.settings.deviceId}} : base});
+  } catch (e) {
+    if (!S.settings.deviceId) throw e;
+    S.settings.deviceId = '';
+    stream = await navigator.mediaDevices.getUserMedia({audio:base});
+  }
+  const src = ac.createMediaStreamSource(stream);
+  analyser = ac.createAnalyser();
+  analyser.fftSize = 2048;
+  buf = new Float32Array(analyser.fftSize);
+  src.connect(analyser);
+}
+function readLevel(t) {
+  if (DEMO) return params.has('loud') ? 80 : 28 + 6 * Math.sin(t * 0.7) + rand(-3, 3);
+  if (!analyser) return 0;
+  analyser.getFloatTimeDomainData(buf);
+  let s = 0;
+  for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  const db = 20 * Math.log10(Math.sqrt(s / buf.length) + 1e-9);
+  return clamp((db + 80) / 70 * 100, 0, 100);   // -80 dBFS..-10 dBFS mapped to 0..100
+}
+async function fillMics() {
+  try {
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+    const sel = $('micSel');
+    sel.innerHTML = '';
+    devs.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || `Microphone ${i + 1}`; sel.appendChild(o); });
+    const cur = stream && stream.getAudioTracks()[0] && stream.getAudioTracks()[0].getSettings().deviceId;
+    sel.value = S.settings.deviceId || cur || '';
+  } catch (e) {}
+}
+
+// ---------- sounds ----------
+function tone(f1, f2, dur, vol = 0.07, delay = 0, type = 'sine') {
+  if (!S.settings.sound || !ac) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t0 = ac.currentTime + delay;
+  o.type = type;
+  o.frequency.setValueAtTime(f1, t0);
+  o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(ac.destination);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+const pop = () => tone(280, 900, 0.12);
+const chime = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.25, 0.06, i * 0.1, 'triangle'));
+const fanfare = () => [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.3, 0.07, i * 0.15, 'triangle'));
+const worried = () => tone(500, 220, 0.35, 0.05);
+const sadPop = () => { tone(700, 1400, 0.08, 0.06); tone(440, 330, 0.3, 0.05, 0.12, 'triangle'); tone(330, 200, 0.5, 0.05, 0.42, 'triangle'); };
+
+// Too loud in "pop" mode: the youngest germ pops and floats away as a ghost. Never the last one.
+const POP_EVERY = 4;   // seconds between pops while it stays loud
+let ghosts = [], popTimer = 0, poppedThisTime = 0;
+function popGerm() {
+  // MEGA germs never pop, and at least one ordinary germ is always left
+  const pool = G.filter(g => !g.mega && !g.merging);
+  if (pool.length <= 1) return;
+  let v = pool[0];
+  for (const g of pool) if (g.age < v.age) v = g;
+  G.splice(G.indexOf(v), 1);
+  for (const g of G) if (g.partner === v) g.partner = null;
+  ghosts.push({x:v.x, y:v.y, r:v.r, type:v.type, phase:v.phase, t:0});
+  poppedThisTime++;
+  sadPop();
+  save();
+}
+
+// ---------- MEGA germs ----------
+// Three germs of the same kind that stay safe for a long time (MEGA_AFTER splits' worth of calm) join into one MEGA germ.
+const MEGA_AFTER = +params.get('megaafter') || 40;   // about one MEGA germ per jar
+let merge = null, megaCheck = 0, bursts = [];
+function checkMega() {
+  const need = S.settings.pace * MEGA_AFTER, by = {};
+  const normal = G.filter(g => !g.mega);
+  for (const g of normal) if (g.age >= need) (by[g.type] = by[g.type] || []).push(g);
+  for (const [type, list] of Object.entries(by)) {
+    if (list.length < 3 || normal.length < 4) continue;   // keep one ordinary germ to carry on splitting
+    list.sort((a, b) => b.age - a.age);
+    merge = {type, list:list.slice(0, 3), t:0};
+    merge.list.forEach(g => g.merging = true);
+    return;
+  }
+}
+function stepMerge(dt) {
+  if (merge.list.some(g => !G.includes(g))) { merge.list.forEach(g => g.merging = false); merge = null; return; }
+  merge.t += dt;
+  const cx = merge.list.reduce((a, g) => a + g.x, 0) / 3, cy = merge.list.reduce((a, g) => a + g.y, 0) / 3;
+  for (const g of merge.list) { g.vx += (cx - g.x) * 8 * dt; g.vy += (cy - g.y) * 8 * dt; }
+  if (merge.t < 1.6) return;
+  const T = BY_ID[merge.type], m = makeGerm(merge.type, cx, cy);
+  m.mega = true; m.age = Math.max(...merge.list.map(g => g.age));
+  G = G.filter(g => !merge.list.includes(g)); G.push(m);
+  const first = !S.megas[merge.type];
+  S.megas[merge.type] = (S.megas[merge.type] || 0) + 1;
+  bursts.push({x:cx, y:cy, t:0});
+  banner(first ? `First MEGA ${T.name}! Three joined into one` : `A MEGA ${T.name}! Three joined into one`, merge.type, true);
+  chime();
+  merge = null;
+  save();
+}
+
+// ---------- game state ----------
+let running = false, paused = false, startled = false;
+let pressure = 0, quietFor = 0, hideAmt = 0, nervous = 0, gR = 0.3, t = 0;
+let calib = null;
+function beginCalib(first) { calib = {left:5, samples:[], first}; }
+function finishCalib() {
+  const s = calib.samples.sort((a, b) => a - b);
+  const base = clamp(s[Math.floor(s.length * 0.6)] || 30, 5, 80);
+  S.settings.base = Math.round(base);
+  S.settings.goal = Math.round(clamp(base + OFFSETS[S.settings.preset || 'calm'], 5, 95));
+  S.settings.calibrated = true;
+  if (calib.first) banner('All set! Shh, watch the germs grow', G[0].type);
+  calib = null;
+  S.splitProg = Math.max(S.splitProg, S.settings.pace * 0.6);
+  syncSettings(); save();
+}
+// The game only runs while its tab is the one in use (visible and focused), so it can't fill jars in the background.
+const focused = () => DEMO ? !params.has('blur') : document.visibilityState === 'visible' && document.hasFocus();
+// Panels always open scrolled to the top
+const toTop = id => { $(id).querySelector('.card').scrollTop = 0; };
+// Clicking the dark area around a panel closes it. The press has to start there too, so a slider
+// drag that ends outside the panel doesn't count.
+document.querySelectorAll('.overlay').forEach(o => {
+  if (o.id === 'start' || o.id === 'pinBox') return;
+  let downOnBackdrop = false;
+  o.addEventListener('pointerdown', e => { downOnBackdrop = e.target === o; });
+  o.addEventListener('click', e => { if (e.target === o && downOnBackdrop) o.classList.add('hidden'); downOnBackdrop = false; });
+});
+const modalOpen = () => ['settings', 'collection', 'shelf', 'jarView', 'pinBox'].some(id => !$(id).classList.contains('hidden'));
+
+// Moves a list of germs about inside a dish of radius 1: wandering, blinking, growing and not overlapping.
+function stepGerms(list, dt, size, o) {
+  const n = list.length;
+  for (const g of list) {
+    if (o.growing) g.age += dt;
+    const grow = 1 - Math.pow(1 - Math.min(1, g.age / 6), 3);
+    g.r = size * (0.62 + 0.38 * grow) * (g.mega ? 1.7 : 1) * (1 - 0.15 * o.hide);
+    g.wa += rand(-1, 1) * dt * 3;
+    const sp = 0.12 * (1 - 0.8 * o.hide);
+    g.vx += Math.cos(g.wa) * sp * dt; g.vy += Math.sin(g.wa) * sp * dt;
+    if (o.dance) g.vy += Math.sin(t * 8 + g.phase) * 0.6 * dt;
+    const damp = Math.exp(-1.6 * dt); g.vx *= damp; g.vy *= damp;
+    g.x += g.vx * dt; g.y += g.vy * dt;
+    if (g.splitT > 0) { g.splitT -= dt; if (g.splitT <= 0) g.partner = null; }
+    g.blinkT -= dt; g.blink -= dt;
+    if (g.blinkT <= 0) { g.blink = 0.14; g.blinkT = rand(2, 6); }
+    g.lookT -= dt;
+    if (g.lookT <= 0) { g.look = {x:rand(-1, 1), y:rand(-1, 1)}; g.lookT = rand(1, 4); }
+  }
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+    const a = list[i], b = list[j];
+    if (a.partner === b || b.partner === a || (a.merging && b.merging)) continue;
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-4, min = (a.r + b.r) * 1.04;
+    if (d < min) { const push = (min - d) * 0.25, ux = dx / d, uy = dy / d; a.x -= ux * push; a.y -= uy * push; b.x += ux * push; b.y += uy * push; }
+  }
+  for (const g of list) {
+    const d = Math.hypot(g.x, g.y), lim = 0.95 - g.r;
+    if (d > lim) { const ux = g.x / d, uy = g.y / d; g.x = ux * lim; g.y = uy * lim; const vn = g.vx * ux + g.vy * uy; if (vn > 0) { g.vx -= 1.6 * vn * ux; g.vy -= 1.6 * vn * uy; } }
+  }
+}
+
+function update(dt) {
+  rawLvl = readLevel(t);
+  lvl += (rawLvl - lvl) * (1 - Math.exp(-(rawLvl > lvl ? 12 : 3) * dt));
+  if (calib) { calib.samples.push(rawLvl); calib.left -= dt; if (calib.left <= 0) finishCalib(); }
+  if (S.today.date !== todayStr()) S.today = {date:todayStr(), secs:0};
+
+  const goal = S.settings.goal;
+  const active = running && !paused && !calib && !celebrate && !modalOpen() && focused();
+  if (active) {
+    const over = lvl - goal;
+    // Short bangs are ignored: noise has to stay over the goal for a few seconds (quicker if very loud).
+    if (over > 0) { pressure += dt * (1 + over / 6); quietFor = 0; }
+    else { pressure = Math.max(0, pressure - dt * 1.5); quietFor += dt; }
+    pressure = Math.min(pressure, 4);
+    if (!startled && pressure > 3) {
+      startled = true; poppedThisTime = 0;
+      if (S.settings.loud === 'pop') { popGerm(); popTimer = POP_EVERY; } else worried();
+    }
+    if (startled && S.settings.loud === 'pop' && over > 0) {
+      popTimer -= dt;
+      if (popTimer <= 0) { popGerm(); popTimer = POP_EVERY; }
+    }
+    if (startled && quietFor > 3) { startled = false; pressure = 0; }
+    if (!startled && over <= 0) {
+      S.splitProg += dt; S.calmTotal += dt; S.today.secs += dt;
+      if (S.splitProg >= S.settings.pace) { S.splitProg = 0; split(); }
+    }
+  } else if (!running || paused || !focused()) { startled = false; pressure = 0; }
+  nervous = startled ? 1 : clamp(pressure / 3, 0, 1);
+  hideAmt += ((startled ? 1 : 0) - hideAmt) * (1 - Math.exp(-4 * dt));
+
+  if (active && !startled && !merge) { megaCheck -= dt; if (megaCheck <= 0) { megaCheck = 1; checkMega(); } }
+  if (merge) stepMerge(dt);
+  for (const b of bursts) b.t += dt;
+  bursts = bursts.filter(b => b.t < 1.4);
+
+  // germ movement, in dish units (dish radius = 1)
+  gR += (Math.min(0.3, Math.sqrt(0.52 / Math.max(1, units()))) - gR) * (1 - Math.exp(-1.5 * dt));
+  stepGerms(G, dt, gR, {growing:active && !startled, hide:hideAmt, dance:!!celebrate});
+
+  if (celebrate) { celebrate.t -= dt; if (celebrate.t <= 0) newJar(); }
+  for (const gh of ghosts) gh.t += dt;
+  ghosts = ghosts.filter(gh => gh.t < 3);
+  for (const c of confetti) { c.vy += 600 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt; c.life -= dt; }
+  confetti = confetti.filter(c => c.life > 0);
+}
+
+// ---------- drawing ----------
+const cv = $('c'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = window.devicePixelRatio || 1; W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+}
+addEventListener('resize', resize); resize();
+
+function seeded(seed) { let s = (Math.floor(seed * 99991) % 2147483646) + 1; return () => (s = s * 16807 % 2147483647) / 2147483647; }
+
+function drawGerm(c, x, y, r, typeId, tt, o = {}) {
+  const T = BY_ID[typeId], ph = o.phase || 0, pale = o.pale || 0, mood = o.mood || 0;
+  const hue = T.rainbow ? (tt * 60 + ph * 57) % 360 : T.hue;
+  const sat = (T.sat ?? (T.gold ? 92 : 72)) * (1 - pale * 0.75), lit = T.lit ?? (T.gold ? 58 : 56);
+  const col = (dl, a = 1) => `hsla(${hue},${sat}%,${clamp(lit + dl + pale * 14, 0, 100)}%,${a})`;
+  c.save(); c.translate(x, y);
+  const path = new Path2D(), N = 32;
+  for (let i = 0; i <= N; i++) {
+    const a = i / N * TAU;
+    const rr = r * (1 + 0.06 * Math.sin(3 * a + tt * 1.6 + ph) + 0.035 * Math.sin(5 * a - tt * 2.3 + ph * 2));
+    i ? path.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : path.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+  }
+  path.closePath();
+  if (o.silhouette) {
+    c.fillStyle = 'rgba(255,255,255,0.10)'; c.fill(path);
+    c.fillStyle = 'rgba(255,255,255,0.45)'; c.font = `bold ${r}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('?', 0, r * 0.05); c.restore(); return;
+  }
+  if (T.spikes) {
+    c.fillStyle = col(-14);
+    for (let i = 0; i < 9; i++) {
+      const a = i / 9 * TAU + ph, w = 0.22;
+      c.beginPath();
+      c.moveTo(Math.cos(a - w) * r * 0.85, Math.sin(a - w) * r * 0.85);
+      c.lineTo(Math.cos(a) * r * 1.34, Math.sin(a) * r * 1.34);
+      c.lineTo(Math.cos(a + w) * r * 0.85, Math.sin(a + w) * r * 0.85);
+      c.fill();
+    }
+  }
+  if (T.fuzz) {
+    c.strokeStyle = col(12); c.lineWidth = Math.max(1, r * 0.06); c.lineCap = 'round';
+    for (let i = 0; i < 40; i++) {
+      const a = i / 40 * TAU, w = Math.sin(tt * 3 + i * 1.7 + ph) * 0.12;
+      c.beginPath(); c.moveTo(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9);
+      c.lineTo(Math.cos(a + w) * r * 1.2, Math.sin(a + w) * r * 1.2); c.stroke();
+    }
+  }
+  if (T.vampire) {
+    // high cape collar behind the head
+    for (const sd of [-1, 1]) {
+      c.fillStyle = '#1b1024';
+      c.beginPath(); c.moveTo(sd * r * 0.3, r * 0.3); c.lineTo(sd * r * 1.25, -r * 0.55); c.lineTo(sd * r * 0.95, r * 0.85); c.closePath(); c.fill();
+      c.fillStyle = '#b3123a';
+      c.beginPath(); c.moveTo(sd * r * 0.4, r * 0.35); c.lineTo(sd * r * 1.08, -r * 0.3); c.lineTo(sd * r * 0.88, r * 0.7); c.closePath(); c.fill();
+    }
+  }
+  if (T.franken) {
+    c.fillStyle = '#8c949e'; c.strokeStyle = '#4a5058'; c.lineWidth = Math.max(1, r * 0.03);
+    for (const sd of [-1, 1]) { c.beginPath(); c.roundRect(sd > 0 ? r * 0.8 : -r * 1.18, r * 0.12, r * 0.38, r * 0.2, r * 0.05); c.fill(); c.stroke(); }
+  }
+  if (T.elf) for (const sd of [-1, 1]) {
+    c.fillStyle = col(-4); c.strokeStyle = col(-30, 0.9); c.lineWidth = Math.max(1, r * 0.05);
+    c.beginPath(); c.moveTo(sd * r * 0.75, -r * 0.3); c.lineTo(sd * r * 1.38, -r * 0.62); c.lineTo(sd * r * 0.82, r * 0.12); c.closePath(); c.fill(); c.stroke();
+  }
+  if (T.reindeer) {
+    c.strokeStyle = '#6b3f1d'; c.lineWidth = Math.max(2, r * 0.1); c.lineCap = 'round';
+    for (const sd of [-1, 1]) {
+      c.beginPath(); c.moveTo(sd * r * 0.3, -r * 0.75); c.lineTo(sd * r * 0.72, -r * 1.55);
+      c.moveTo(sd * r * 0.47, -r * 1.08); c.lineTo(sd * r * 0.2, -r * 1.42);
+      c.moveTo(sd * r * 0.6, -r * 1.32); c.lineTo(sd * r * 1.0, -r * 1.45); c.stroke();
+    }
+  }
+  if (T.bunny) for (const sd of [-1, 1]) {
+    c.save(); c.translate(sd * r * 0.38, -r * 1.15); c.rotate(sd * 0.22);
+    c.fillStyle = col(0); c.strokeStyle = col(-30, 0.9); c.lineWidth = Math.max(1, r * 0.05);
+    c.beginPath(); c.ellipse(0, 0, r * 0.22, r * 0.6, 0, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = '#ffb3c7'; c.beginPath(); c.ellipse(0, r * 0.05, r * 0.1, r * 0.42, 0, 0, TAU); c.fill();
+    c.restore();
+  }
+  if (T.toffee) { c.fillStyle = '#b07a43'; c.beginPath(); c.roundRect(-r * 0.06, -r * 1.55, r * 0.12, r * 0.7, r * 0.04); c.fill(); }
+  if (T.rocket) {
+    c.fillStyle = '#e8413c';
+    for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * r * 0.55, r * 0.35); c.lineTo(sd * r * 1.2, r * 1.1); c.lineTo(sd * r * 0.25, r * 0.85); c.closePath(); c.fill(); }
+    c.beginPath(); c.moveTo(-r * 0.5, -r * 0.7); c.lineTo(r * 0.5, -r * 0.7); c.lineTo(0, -r * 1.55); c.closePath(); c.fill();
+    const fl = r * (0.55 + 0.18 * Math.sin(tt * 25 + ph));
+    const fg = c.createLinearGradient(0, r * 0.85, 0, r * 0.9 + fl);
+    fg.addColorStop(0, '#fff3a0'); fg.addColorStop(0.5, '#ffa53a'); fg.addColorStop(1, 'rgba(255,80,40,0)');
+    c.fillStyle = fg; c.beginPath(); c.moveTo(-r * 0.3, r * 0.85); c.quadraticCurveTo(0, r * 0.9 + fl * 1.3, r * 0.3, r * 0.85); c.closePath(); c.fill();
+  }
+  if (T.glow) { c.shadowColor = `hsla(${hue},100%,70%,${0.95 * (1 - pale)})`; c.shadowBlur = r * (0.9 + 0.4 * Math.sin(tt * 3 + ph)); }
+  const gr = c.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r * 1.1);
+  gr.addColorStop(0, col(22)); gr.addColorStop(0.55, col(0)); gr.addColorStop(1, col(-18));
+  if (T.rainbow && c.createConicGradient) {
+    const cg = c.createConicGradient(tt * 0.8 + ph, 0, 0);
+    for (let i = 0; i <= 6; i++) cg.addColorStop(i / 6, `hsla(${i * 60},${85 * (1 - pale * 0.75)}%,${62 + pale * 14}%,1)`);
+    c.fillStyle = cg; c.fill(path); c.shadowBlur = 0;
+    const sh = c.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.05, 0, 0, r * 1.1);
+    sh.addColorStop(0, 'rgba(255,255,255,0.45)'); sh.addColorStop(0.6, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.2)');
+    c.fillStyle = sh; c.fill(path);
+  } else { c.fillStyle = gr; c.fill(path); c.shadowBlur = 0; }
+  c.save(); c.clip(path);
+  if (T.stripes) { c.fillStyle = col(-22, 0.5); c.rotate(0.5); for (let i = -3; i <= 3; i++) c.fillRect(i * r * 0.5 - r * 0.12, -r * 1.6, r * 0.24, r * 3.2); }
+  if (T.spots) {
+    const rn = seeded(ph + 1); c.fillStyle = col(-24, 0.55);
+    for (let i = 0; i < 6; i++) { const a = rn() * TAU, d = rn() * 0.78 * r; c.beginPath(); c.arc(Math.cos(a) * d, Math.sin(a) * d, r * (0.1 + rn() * 0.12), 0, TAU); c.fill(); }
+  }
+  if (T.pumpkin) {
+    c.strokeStyle = col(-20, 0.55); c.lineWidth = Math.max(1, r * 0.06);
+    for (const k of [0.35, 0.72]) for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(sd * r * k * 0.5, 0, r * k * 0.55, r * 1.05, 0, 0, TAU); c.stroke(); }
+  }
+  if (T.mummy) {
+    c.lineWidth = r * 0.14;
+    for (let i = -4; i <= 4; i++) {
+      c.strokeStyle = i % 2 ? col(-10, 0.6) : col(8, 0.6);
+      c.beginPath(); c.moveTo(-r * 1.3, i * r * 0.3 - r * 0.25 + (i % 2) * r * 0.1); c.lineTo(r * 1.3, i * r * 0.3 + r * 0.2); c.stroke();
+    }
+  }
+  if (T.snowman) {
+    c.fillStyle = '#d8283c'; c.fillRect(-r * 1.3, r * 0.45, r * 2.6, r * 0.2);
+    c.fillStyle = '#2e8b57'; for (let i = -4; i <= 4; i++) c.fillRect(i * r * 0.3, r * 0.45, r * 0.1, r * 0.2);
+  }
+  if (T.ginger) {
+    c.save(); c.scale(0.84, 0.84); c.setLineDash([r * 0.14, r * 0.09]); c.strokeStyle = '#fff'; c.lineWidth = Math.max(1.5, r * 0.07); c.stroke(path); c.restore();
+    [[0, 0.68, '#e8413c'], [-0.3, 0.6, '#2e9d4f'], [0.3, 0.6, '#2e9d4f']].forEach(([bx, by, bc]) => { c.fillStyle = bc; c.beginPath(); c.arc(bx * r, by * r, r * 0.08, 0, TAU); c.fill(); });
+  }
+  if (T.santa) {
+    c.fillStyle = '#f6f6f6';
+    for (let i = -3; i <= 3; i++) { c.beginPath(); c.arc(i * r * 0.28, r * 0.74 - Math.abs(i) * r * 0.06, r * 0.3, 0, TAU); c.fill(); }
+    c.beginPath(); c.ellipse(0, r * 0.95, r * 0.95, r * 0.35, 0, 0, TAU); c.fill();
+  }
+  if (T.egg) {
+    const band = (y, bc) => {
+      c.strokeStyle = bc; c.lineWidth = r * 0.1; c.beginPath();
+      for (let i = 0; i <= 12; i++) { const x = -r * 1.2 + i * r * 0.2, yy = y + (i % 2 ? -1 : 1) * r * 0.08; i ? c.lineTo(x, yy) : c.moveTo(x, yy); }
+      c.stroke();
+    };
+    band(-r * 0.55, T.gold ? '#fff2a8' : '#ff8fc8'); band(r * 0.66, T.gold ? '#fff2a8' : '#ffd23f');
+    c.fillStyle = T.gold ? '#fff8d0' : '#8f6fff';
+    for (let i = -3; i <= 3; i++) { c.beginPath(); c.arc(i * r * 0.3, -r * 0.8, r * 0.06, 0, TAU); c.fill(); }
+  }
+  if (T.toffee) {
+    c.fillStyle = 'hsla(33,85%,42%,0.95)'; c.beginPath(); c.moveTo(-r * 1.3, -r * 1.3); c.lineTo(r * 1.3, -r * 1.3); c.lineTo(r * 1.3, -r * 0.45);
+    for (let i = 0; i <= 10; i++) c.lineTo(r * 1.2 - i * r * 0.24, -r * (i % 3 === 1 ? 0.25 : 0.45));
+    c.lineTo(-r * 1.3, -r * 0.45); c.closePath(); c.fill();
+  }
+  if (T.present) { c.fillStyle = '#e8413c'; c.fillRect(-r * 0.12, -r * 1.3, r * 0.24, r * 2.6); c.fillRect(-r * 1.3, r * 0.52, r * 2.6, r * 0.2); }
+  if (T.cake) {
+    const cols = ['#ff4f8b', '#4fd1ff', '#ffd23f', '#7fe0a0'], rn = seeded(ph + 3);
+    for (let i = 0; i < 14; i++) { c.save(); c.translate((rn() - 0.5) * r * 1.8, (rn() - 0.5) * r * 1.8); c.rotate(rn() * 3); c.fillStyle = cols[i % 4]; c.fillRect(-r * 0.07, -r * 0.025, r * 0.14, r * 0.05); c.restore(); }
+  }
+  if (T.firework) {
+    const rn = seeded(ph + 5);
+    for (let i = 0; i < 10; i++) { c.fillStyle = `rgba(255,255,255,${0.4 + 0.6 * Math.abs(Math.sin(tt * 2 + i))})`; c.beginPath(); c.arc((rn() - 0.5) * r * 1.8, (rn() - 0.5) * r * 1.8, r * 0.03, 0, TAU); c.fill(); }
+  }
+  if (T.cosmic) {
+    const rn = seeded(ph + 7);
+    for (let i = 0; i < 16; i++) {
+      const sx = (rn() - 0.5) * r * 1.8, sy = (rn() - 0.5) * r * 1.8, tw = 0.4 + 0.6 * Math.abs(Math.sin(tt * 2 + i * 1.3));
+      c.fillStyle = `rgba(255,255,255,${tw})`; c.beginPath(); c.arc(sx, sy, r * (0.02 + rn() * 0.035), 0, TAU); c.fill();
+    }
+    c.fillStyle = 'rgba(255,120,220,0.25)'; c.beginPath(); c.ellipse(r * 0.2, r * 0.25, r * 0.6, r * 0.18, -0.5, 0, TAU); c.fill();
+  }
+  if (T.franken) {
+    c.fillStyle = '#1e2a1e'; c.beginPath(); c.moveTo(-r * 1.3, -r * 1.3); c.lineTo(r * 1.3, -r * 1.3); c.lineTo(r * 1.3, -r * 0.55);
+    for (let i = 0; i <= 8; i++) c.lineTo(r * 1.0 - i * r * 0.25, -r * (i % 2 ? 0.48 : 0.6));
+    c.lineTo(-r * 1.3, -r * 0.55); c.closePath(); c.fill();
+    c.strokeStyle = '#2b3a2b'; c.lineWidth = Math.max(1, r * 0.035); c.beginPath(); c.moveTo(-r * 0.62, r * 0.55); c.lineTo(-r * 0.2, r * 0.68);
+    for (let i = 0; i < 4; i++) { const sx = -r * 0.56 + i * r * 0.11, sy = r * 0.57 + i * r * 0.033; c.moveTo(sx, sy - r * 0.06); c.lineTo(sx, sy + r * 0.06); }
+    c.stroke();
+  }
+  if (T.vampire) {
+    c.fillStyle = '#221833'; c.beginPath(); c.moveTo(-r * 1.3, -r * 1.3); c.lineTo(r * 1.3, -r * 1.3); c.lineTo(r * 1.3, -r * 0.5);
+    c.quadraticCurveTo(r * 0.4, -r * 0.62, 0, -r * 0.32); c.quadraticCurveTo(-r * 0.4, -r * 0.62, -r * 1.3, -r * 0.5); c.closePath(); c.fill();
+  }
+  c.restore();
+  c.lineWidth = Math.max(1.5, r * 0.07); c.strokeStyle = col(-30, 0.9); c.stroke(path);
+  c.fillStyle = 'rgba(255,255,255,0.35)';
+  c.beginPath(); c.ellipse(-r * 0.4, -r * 0.48, r * 0.22, r * 0.12, -0.6, 0, TAU); c.fill();
+  if (T.gold) {
+    for (let i = 0; i < 3; i++) {
+      const a = tt * 0.8 + i * 2.1 + ph, s = r * 0.16 * (0.5 + 0.5 * Math.sin(tt * 4 + i * 2));
+      const sx = Math.cos(a) * r * 1.15, sy = Math.sin(a) * r * 1.15;
+      c.fillStyle = '#fff8c0'; c.beginPath();
+      c.moveTo(sx, sy - s); c.lineTo(sx + s * 0.3, sy); c.lineTo(sx, sy + s); c.lineTo(sx - s * 0.3, sy); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(sx - s, sy); c.lineTo(sx, sy + s * 0.3); c.lineTo(sx + s, sy); c.lineTo(sx, sy - s * 0.3); c.closePath(); c.fill();
+    }
+  }
+  drawFace(c, r, T, o, col);
+  if (T.pumpkin) {
+    c.fillStyle = '#4e6b2a'; c.beginPath(); c.moveTo(-r * 0.08, -r * 0.88);
+    c.quadraticCurveTo(-r * 0.12, -r * 1.2, r * 0.12, -r * 1.32); c.lineTo(r * 0.18, -r * 1.22);
+    c.quadraticCurveTo(r * 0.06, -r * 1.12, r * 0.1, -r * 0.88); c.closePath(); c.fill();
+  }
+  if (T.witch) {
+    c.save(); c.rotate(-0.12);
+    c.fillStyle = '#1d1430';
+    c.beginPath(); c.ellipse(0, -r * 0.82, r * 0.95, r * 0.2, 0, 0, TAU); c.fill();
+    c.beginPath(); c.moveTo(-r * 0.5, -r * 0.86); c.lineTo(r * 0.5, -r * 0.86);
+    c.quadraticCurveTo(r * 0.25, -r * 1.6, r * 0.6, -r * 2.15); c.quadraticCurveTo(-r * 0.1, -r * 1.7, -r * 0.5, -r * 0.86); c.fill();
+    c.fillStyle = '#8f4fd8'; c.fillRect(-r * 0.47, -r * 1.08, r * 0.92, r * 0.16);
+    c.fillStyle = '#ffd23f'; c.fillRect(-r * 0.08, -r * 1.11, r * 0.17, r * 0.22);
+    c.fillStyle = '#1d1430'; c.fillRect(-r * 0.03, -r * 1.06, r * 0.07, r * 0.12);
+    c.restore();
+  }
+  if (T.snowman) {
+    c.fillStyle = '#ff8a1f'; c.beginPath(); c.moveTo(0, r * 0.02); c.lineTo(r * 0.5, r * 0.1); c.lineTo(0, r * 0.16); c.closePath(); c.fill();
+    c.save(); c.translate(r * 0.42, r * 0.58); c.rotate(-0.25); c.fillStyle = '#d8283c'; c.fillRect(-r * 0.1, 0, r * 0.22, r * 0.55); c.restore();
+    c.fillStyle = '#1b1b24'; c.fillRect(-r * 0.6, -r * 0.92, r * 1.2, r * 0.12); c.fillRect(-r * 0.36, -r * 1.52, r * 0.72, r * 0.62);
+    c.fillStyle = '#d8283c'; c.fillRect(-r * 0.36, -r * 1.02, r * 0.72, r * 0.1);
+  }
+  if (T.elf) {
+    c.fillStyle = '#2e9d4f'; c.beginPath(); c.moveTo(-r * 0.62, -r * 0.72);
+    c.quadraticCurveTo(-r * 0.2, -r * 1.7, r * 0.95, -r * 1.35); c.quadraticCurveTo(r * 0.3, -r * 1.2, r * 0.62, -r * 0.72); c.closePath(); c.fill();
+    c.fillStyle = '#d8283c'; c.beginPath(); c.roundRect(-r * 0.68, -r * 0.88, r * 1.36, r * 0.2, r * 0.1); c.fill();
+    c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(r * 0.98, -r * 1.33, r * 0.12, 0, TAU); c.fill();
+  }
+  if (T.reindeer) { c.save(); c.shadowColor = '#ff3030'; c.shadowBlur = r * 0.5; c.fillStyle = '#ff2a2a'; c.beginPath(); c.arc(0, r * 0.1, r * 0.13, 0, TAU); c.fill(); c.restore(); }
+  if (T.santa) {
+    c.fillStyle = '#d8283c'; c.beginPath(); c.moveTo(-r * 0.7, -r * 0.75);
+    c.quadraticCurveTo(-r * 0.1, -r * 1.75, r * 0.95, -r * 1.25); c.quadraticCurveTo(r * 0.4, -r * 1.05, r * 0.7, -r * 0.75); c.closePath(); c.fill();
+    c.fillStyle = '#f6f6f6'; c.beginPath(); c.roundRect(-r * 0.78, -r * 0.9, r * 1.56, r * 0.26, r * 0.13); c.fill();
+    c.beginPath(); c.arc(r * 0.98, -r * 1.24, r * 0.15, 0, TAU); c.fill();
+    for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(sd * r * 0.16, r * 0.26, r * 0.18, r * 0.09, -sd * 0.3, 0, TAU); c.fill(); }
+  }
+  if (T.bunny) { c.fillStyle = '#ff8fb0'; c.beginPath(); c.moveTo(-r * 0.08, r * 0.06); c.lineTo(r * 0.08, r * 0.06); c.lineTo(0, r * 0.16); c.closePath(); c.fill(); }
+  if (T.chick) {
+    c.fillStyle = '#ff9a1f'; c.beginPath(); c.moveTo(-r * 0.14, r * 0.14); c.lineTo(r * 0.14, r * 0.14); c.lineTo(0, r * 0.34); c.closePath(); c.fill();
+    c.fillStyle = '#fffaf0'; c.strokeStyle = '#d8cdb8'; c.lineWidth = Math.max(1, r * 0.04);
+    c.beginPath(); c.moveTo(-r * 0.62, -r * 0.62);
+    for (let i = 1; i <= 8; i++) c.lineTo(-r * 0.62 + i * r * 0.155, -r * (i % 2 ? 0.8 : 0.62));
+    c.quadraticCurveTo(r * 0.6, -r * 1.35, 0, -r * 1.38); c.quadraticCurveTo(-r * 0.6, -r * 1.35, -r * 0.62, -r * 0.62); c.closePath(); c.fill(); c.stroke();
+  }
+  if (T.sparkler) {
+    c.strokeStyle = '#8a8a8a'; c.lineWidth = Math.max(1.5, r * 0.06); c.beginPath(); c.moveTo(r * 0.75, r * 0.35); c.lineTo(r * 1.3, -r * 0.55); c.stroke();
+    for (let i = 0; i < 14; i++) {
+      const a = i / 14 * TAU + tt * 3, l = r * (0.15 + 0.3 * Math.abs(Math.sin(tt * 9 + i * 2.3)));
+      c.strokeStyle = i % 2 ? '#fff6b0' : '#ffb347'; c.lineWidth = Math.max(1, r * 0.03);
+      c.beginPath(); c.moveTo(r * 1.3, -r * 0.55); c.lineTo(r * 1.3 + Math.cos(a) * l, -r * 0.55 + Math.sin(a) * l); c.stroke();
+    }
+  }
+  if (T.firework) {
+    for (let b = 0; b < 3; b++) {
+      const k = (tt * 0.6 + b / 3 + ph) % 1, a = b * 2.1 + ph, bx = Math.cos(a) * r * 1.1, by = Math.sin(a) * r * 1.1;
+      for (let i = 0; i < 8; i++) {
+        const aa = i / 8 * TAU, d = r * (0.1 + 0.45 * k);
+        c.fillStyle = `hsla(${(b * 120 + i * 20) % 360},95%,65%,${1 - k})`; c.beginPath(); c.arc(bx + Math.cos(aa) * d, by + Math.sin(aa) * d, r * 0.05, 0, TAU); c.fill();
+      }
+    }
+  }
+  if (T.present) {
+    c.fillStyle = '#e8413c';
+    for (const sd of [-1, 1]) { c.beginPath(); c.ellipse(sd * r * 0.26, -r * 1.02, r * 0.26, r * 0.15, sd * -0.5, 0, TAU); c.fill(); }
+    c.beginPath(); c.arc(0, -r * 0.98, r * 0.1, 0, TAU); c.fill();
+  }
+  if (T.cake) {
+    c.fillStyle = '#fff3d6'; c.beginPath(); c.roundRect(-r * 0.45, -r * 1.25, r * 0.9, r * 0.45, r * 0.08); c.fill();
+    c.fillStyle = '#ff7fb0'; c.beginPath(); c.moveTo(-r * 0.45, -r * 1.25); c.lineTo(r * 0.45, -r * 1.25); c.lineTo(r * 0.45, -r * 1.1);
+    for (let i = 0; i <= 6; i++) c.lineTo(r * 0.45 - i * r * 0.15, -r * (i % 2 ? 0.98 : 1.1));
+    c.closePath(); c.fill();
+    c.fillStyle = '#4fd1ff'; c.fillRect(-r * 0.05, -r * 1.6, r * 0.1, r * 0.36);
+    c.fillStyle = '#ffd23f'; c.beginPath(); c.ellipse(0, -r * 1.7, r * 0.07, r * 0.12 * (1 + 0.15 * Math.sin(tt * 18 + ph)), 0, 0, TAU); c.fill();
+  }
+  if (T.hat) {
+    c.save(); c.rotate(0.18);
+    c.beginPath(); c.moveTo(-r * 0.32, -r * 0.8); c.lineTo(r * 0.32, -r * 0.8); c.lineTo(0, -r * 1.55); c.closePath();
+    c.fillStyle = '#ffd23f'; c.fill(); c.save(); c.clip();
+    c.fillStyle = '#ff4f8b'; for (let i = 0; i < 4; i++) c.fillRect(-r, -r * 0.9 - i * r * 0.2, r * 2, r * 0.08);
+    c.restore();
+    c.fillStyle = '#4fd1ff'; c.beginPath(); c.arc(0, -r * 1.58, r * 0.11, 0, TAU); c.fill();
+    c.restore();
+  }
+  if (T.crown) {
+    c.beginPath();
+    c.moveTo(-r * 0.4, -r * 0.82); c.lineTo(-r * 0.46, -r * 1.3); c.lineTo(-r * 0.2, -r * 1.08); c.lineTo(0, -r * 1.42);
+    c.lineTo(r * 0.2, -r * 1.08); c.lineTo(r * 0.46, -r * 1.3); c.lineTo(r * 0.4, -r * 0.82); c.closePath();
+    c.fillStyle = '#ffcf33'; c.fill(); c.lineWidth = r * 0.04; c.strokeStyle = '#b8860b'; c.stroke();
+    [[-0.22, -0.94, '#ff3355'], [0, -0.98, '#33aaff'], [0.22, -0.94, '#33dd77']].forEach(([gx, gy, gc]) => { c.fillStyle = gc; c.beginPath(); c.arc(gx * r, gy * r, r * 0.06, 0, TAU); c.fill(); });
+  }
+  if (o.mega) {
+    // a turning ring of gold dashes marks a MEGA germ
+    c.setLineDash([r * 0.16, r * 0.12]); c.lineDashOffset = -tt * r * 0.6;
+    c.strokeStyle = `rgba(255,215,90,${0.9 * (1 - pale * 0.6)})`; c.lineWidth = Math.max(2, r * 0.06);
+    c.beginPath(); c.arc(0, 0, r * 1.2, 0, TAU); c.stroke(); c.setLineDash([]);
+  }
+  c.restore();
+}
+
+function drawFace(c, r, T, o, col) {
+  const mood = o.mood || 0, look = o.look || {x:0, y:0}, ey = -r * 0.1;
+  const ink = T.cosmic || T.firework ? '#efe6ff' : '#17172b', pupil = '#17172b';
+  const eyes = T.oneEye ? [{x:0, s:r * 0.34, side:0}] : [{x:-r * 0.32, s:r * 0.2, side:-1}, {x:r * 0.32, s:r * 0.2, side:1}];
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  if (T.pumpkin && mood < 2) {
+    // carved jack-o'-lantern face that glows a little
+    c.fillStyle = mood >= 1 ? '#2a1405' : `rgba(255,${200 + Math.round(40 * Math.sin(Date.now() / 300))},80,0.95)`;
+    c.strokeStyle = '#2a1405'; c.lineWidth = Math.max(1, r * 0.04);
+    for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * r * 0.5, ey + r * 0.1); c.lineTo(sd * r * 0.14, ey + r * 0.1); c.lineTo(sd * r * 0.3, ey - r * 0.2); c.closePath(); c.fill(); c.stroke(); }
+    c.beginPath(); c.moveTo(-r * 0.5, r * 0.25);
+    for (let i = 1; i <= 6; i++) c.lineTo(-r * 0.5 + i * r * (1 / 6), r * (i % 2 ? 0.35 : 0.25));
+    c.lineTo(r * 0.38, r * 0.48); c.lineTo(-r * 0.38, r * 0.48); c.closePath(); c.fill(); c.stroke();
+    return;
+  }
+  if (mood >= 2) {
+    // eyes squeezed shut: > <
+    c.strokeStyle = ink; c.lineWidth = Math.max(1.5, r * 0.07);
+    for (const e of eyes) {
+      const s = e.s * 0.8; c.beginPath();
+      if (e.side === 0) { c.moveTo(e.x - s, ey); c.lineTo(e.x + s, ey); }
+      else { const d = -e.side; c.moveTo(e.x - d * s * 0.6, ey - s * 0.7); c.lineTo(e.x + d * s * 0.6, ey); c.lineTo(e.x - d * s * 0.6, ey + s * 0.7); }
+      c.stroke();
+    }
+    c.beginPath();
+    for (let i = 0; i <= 6; i++) { const mx = -r * 0.24 + i * r * 0.08, my = r * 0.36 + (i % 2 ? -1 : 1) * r * 0.04; i ? c.lineTo(mx, my) : c.moveTo(mx, my); }
+    c.lineWidth = Math.max(1.2, r * 0.05); c.stroke();
+    return;
+  }
+  for (const e of eyes) {
+    const s = e.s * (mood >= 1 ? 1.15 : 1);
+    if (o.blink > 0) {
+      c.strokeStyle = ink; c.lineWidth = Math.max(1.5, r * 0.06);
+      c.beginPath(); c.arc(e.x, ey - s * 0.3, s * 0.8, 0.2 * Math.PI, 0.8 * Math.PI); c.stroke();
+      continue;
+    }
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(e.x, ey, s, 0, TAU); c.fill();
+    c.lineWidth = Math.max(1, r * 0.03); c.strokeStyle = col(-35, 0.8); c.stroke();
+    const pr = s * (mood >= 1 ? 0.32 : 0.5), px = e.x + look.x * s * 0.35, py = ey + look.y * s * 0.3;
+    c.fillStyle = T.vampire ? '#b3123a' : pupil; c.beginPath(); c.arc(px, py, pr, 0, TAU); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(px - pr * 0.35, py - pr * 0.35, pr * 0.35, 0, TAU); c.fill();
+  }
+  c.strokeStyle = ink; c.fillStyle = ink; c.lineWidth = Math.max(1.2, r * 0.06);
+  if (mood >= 1) { c.beginPath(); c.arc(0, r * 0.38, r * 0.08, 0, TAU); c.fill(); }
+  else {
+    if (!T.chick) { c.beginPath(); c.arc(0, r * 0.18, r * 0.24, 0.18 * Math.PI, 0.82 * Math.PI); c.stroke(); }
+    if (T.vampire) {
+      c.fillStyle = '#fff';
+      for (const sd of [-1, 1]) { c.beginPath(); c.moveTo(sd * r * 0.03, r * 0.4); c.lineTo(sd * r * 0.15, r * 0.39); c.lineTo(sd * r * 0.09, r * 0.55); c.closePath(); c.fill(); }
+    }
+    if (!T.oneEye) { c.fillStyle = 'rgba(255,120,150,0.35)'; [-1, 1].forEach(sd => { c.beginPath(); c.arc(sd * r * 0.58, r * 0.2, r * 0.11, 0, TAU); c.fill(); }); }
+  }
+}
+
+// A little jar picture whose dots match what was in it: each kind gets dots in proportion to how much
+// of the jar it filled (a MEGA germ counts as three), in its own colour, piled up from the bottom.
+const JAR_COLS = 4, JAR_ROWS = 5;
+function jarDots(counts, megas) {
+  const share = {};
+  for (const [list, k] of [[counts || {}, 1], [megas || {}, 3]])
+    for (const [type, n] of Object.entries(list)) if (BY_ID[type]) share[type] = (share[type] || 0) + n * k;
+  const total = Object.values(share).reduce((a, b) => a + b, 0) || 1, slots = JAR_COLS * JAR_ROWS;
+  // rare and better always get at least one dot; the rest are shared out by largest remainder
+  const alloc = {}, rem = [];
+  let used = 0;
+  for (const [type, n] of Object.entries(share)) {
+    const exact = n / total * slots, min = RARE.has(BY_ID[type].rarity) ? 1 : 0;
+    alloc[type] = Math.max(min, Math.floor(exact)); used += alloc[type];
+    rem.push([type, exact - Math.floor(exact)]);
+  }
+  rem.sort((a, b) => b[1] - a[1]);
+  for (let i = 0; used < slots && rem.length; i = (i + 1) % rem.length) { alloc[rem[i][0]]++; used++; }
+  while (used > slots) { const big = Object.keys(alloc).sort((a, b) => alloc[b] - alloc[a])[0]; alloc[big]--; used--; }
+  const dots = [];
+  for (const [type, n] of Object.entries(alloc)) for (let i = 0; i < n; i++) dots.push(type);
+  const rn = seeded(total + dots.length * 7);
+  for (let i = dots.length - 1; i > 0; i--) { const j = Math.floor(rn() * (i + 1)); [dots[i], dots[j]] = [dots[j], dots[i]]; }
+  return dots;
+}
+function drawJar(c, x, y, w, counts, megas) {
+  const h = w * 1.25;
+  c.save(); c.translate(x, y);
+  c.fillStyle = 'rgba(200,230,255,0.15)'; c.strokeStyle = 'rgba(220,240,255,0.6)'; c.lineWidth = Math.max(1.5, w * 0.03);
+  c.beginPath(); c.roundRect(-w / 2, -h, w, h, w * 0.18); c.fill(); c.stroke();
+  c.save(); c.beginPath(); c.roundRect(-w / 2, -h, w, h, w * 0.18); c.clip();
+  const dots = jarDots(counts, megas), rn = seeded(w * 13 + dots.length), gap = w * 0.82 / JAR_COLS, rh = h * 0.84 / JAR_ROWS;
+  dots.forEach((type, i) => {
+    const T = BY_ID[type], col = i % JAR_COLS, row = Math.floor(i / JAR_COLS);
+    const dx = -w * 0.41 + gap * (col + 0.5) + (row % 2 ? gap * 0.18 : -gap * 0.18) + (rn() - 0.5) * gap * 0.2;
+    const dy = -h * 0.08 - rh * (row + 0.5) + (rn() - 0.5) * rh * 0.2;
+    const hue = T.rainbow ? rn() * 360 : T.hue;
+    c.fillStyle = `hsl(${hue},${T.sat ?? (T.gold ? 92 : 72)}%,${T.lit ?? (T.gold ? 58 : 56)}%)`;
+    c.beginPath(); c.arc(dx, dy, gap * 0.48, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.25)'; c.lineWidth = Math.max(0.5, w * 0.012); c.stroke();
+  });
+  c.restore();
+  c.fillStyle = '#8a6a4a'; c.beginPath(); c.roundRect(-w * 0.42, -h - w * 0.16, w * 0.84, w * 0.2, Math.max(2, w * 0.05)); c.fill();
+  c.restore();
+}
+
+// A popped germ: a burst of splats in its colour, then a little ghost with X eyes floating up and away.
+function drawGhost(c, x, y, r, gh) {
+  const k = gh.t, hue = BY_ID[gh.type].hue;
+  if (k < 0.5) {
+    const s = k / 0.5;
+    c.fillStyle = `hsla(${hue},75%,58%,${1 - s})`;
+    for (let i = 0; i < 10; i++) {
+      const a = i / 10 * TAU + gh.phase, d = r * (0.4 + 1.3 * s);
+      c.beginPath(); c.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * 0.16 * (1 - s * 0.6), 0, TAU); c.fill();
+    }
+  }
+  if (k < 0.15) return;
+  const gk = (k - 0.15) / 2.85, alpha = Math.min(1, gk * 6) * (1 - gk);
+  const gx = x + Math.sin(k * 3 + gh.phase) * r * 0.5, gy = y - gk * r * 7, w = r * 1.2;
+  c.save(); c.translate(gx, gy); c.globalAlpha = alpha * 0.9;
+  c.beginPath();
+  c.moveTo(-w, 0); c.arc(0, 0, w, Math.PI, 0);
+  c.lineTo(w, w * 1.1);
+  for (let i = 0; i < 4; i++) { const x1 = w - (i + 0.5) * w / 2, x2 = w - (i + 1) * w / 2; c.quadraticCurveTo(x1, w * (i % 2 ? 1.35 : 0.8) + Math.sin(k * 6 + i) * w * 0.1, x2, w * 1.1); }
+  c.closePath();
+  c.fillStyle = `hsla(${hue},40%,92%,1)`; c.fill();
+  c.strokeStyle = 'rgba(23,23,43,0.9)'; c.lineWidth = Math.max(1.5, w * 0.1); c.lineCap = 'round';
+  for (const ex of [-w * 0.38, w * 0.38]) {
+    const s = w * 0.16;
+    c.beginPath(); c.moveTo(ex - s, -w * 0.1 - s); c.lineTo(ex + s, -w * 0.1 + s); c.moveTo(ex + s, -w * 0.1 - s); c.lineTo(ex - s, -w * 0.1 + s); c.stroke();
+  }
+  c.fillStyle = 'rgba(23,23,43,0.9)'; c.beginPath(); c.ellipse(0, w * 0.4, w * 0.12, w * 0.16, 0, 0, TAU); c.fill();
+  c.restore();
+}
+
+let confetti = [];
+function spawnConfetti() {
+  for (let i = 0; i < 180; i++) confetti.push({x:rand(0, W), y:rand(-H * 0.5, 0), vx:rand(-60, 60), vy:rand(0, 200),
+    rot:rand(0, TAU), vr:rand(-8, 8), c:`hsl(${rand(0, 360)},90%,62%)`, s:rand(6, 13), life:rand(4, 7)});
+}
+
+function drawDish(c, cx, cy, R) {
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(cx, cy + R * 0.05, R * 1.03, 0, TAU); c.fill();
+  const ag = c.createRadialGradient(cx - R * 0.2, cy - R * 0.2, 0, cx, cy, R);
+  ag.addColorStop(0, 'rgba(255,244,210,0.22)'); ag.addColorStop(1, 'rgba(255,230,180,0.10)');
+  c.fillStyle = ag; c.beginPath(); c.arc(cx, cy, R, 0, TAU); c.fill();
+  c.lineWidth = R * 0.025; c.strokeStyle = 'rgba(255,255,255,0.5)'; c.stroke();
+  c.lineWidth = R * 0.01; c.strokeStyle = 'rgba(255,255,255,0.15)'; c.beginPath(); c.arc(cx, cy, R * 0.955, 0, TAU); c.stroke();
+}
+
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = ctx.createRadialGradient(W * 0.45, H * 0.45, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.8);
+  bg.addColorStop(0, '#173052'); bg.addColorStop(1, '#070f1c');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const cx = W * 0.46, cy = H * 0.46, R = Math.min(W * 0.33, H * 0.38);
+  drawDish(ctx, cx, cy, R);
+
+  // progress ring: time until the next split
+  const prog = celebrate ? 1 : clamp(S.splitProg / S.settings.pace, 0, 1);
+  ctx.lineCap = 'round'; ctx.lineWidth = R * 0.035;
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, 0, TAU); ctx.stroke();
+  ctx.strokeStyle = startled ? 'rgba(160,170,190,0.6)' : nervous > 0.2 ? '#ffb347' : '#5fe08a';
+  if (prog > 0.002) { ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, -Math.PI / 2, -Math.PI / 2 + prog * TAU); ctx.stroke(); }
+
+  // germs
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R * 0.99, 0, TAU); ctx.clip();
+  for (const g of G) {
+    if (g.splitT > 0 && g.partner) {
+      const k = g.splitT / 0.7, mx = (g.x + g.partner.x) / 2, my = (g.y + g.partner.y) / 2;
+      ctx.fillStyle = `hsla(${BY_ID[g.type].hue},70%,56%,0.9)`;
+      ctx.beginPath(); ctx.arc(cx + mx * R, cy + my * R, g.r * R * 0.75 * k, 0, TAU); ctx.fill();
+    }
+  }
+  const mood = startled ? 2 : nervous > 0.35 ? 1 : 0;
+  for (const g of G) {
+    const shake = (hideAmt * 0.07 + nervous * 0.02) * g.r * R;
+    const sx = cx + g.x * R + Math.sin(t * 43 + g.phase * 7) * shake;
+    const sy = cy + g.y * R + Math.cos(t * 37 + g.phase * 5) * shake;
+    drawGerm(ctx, sx, sy, g.r * R, g.type, t, {phase:g.phase, pale:hideAmt, mood, blink:g.blink, look:g.look, mega:g.mega});
+  }
+  ctx.restore();
+  if (hideAmt > 0.01) { ctx.fillStyle = `rgba(15,25,50,${0.35 * hideAmt})`; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill(); }
+  for (const gh of ghosts) drawGhost(ctx, cx + gh.x * R, cy + gh.y * R, Math.max(gh.r, 0.06) * R, gh);
+  for (const b of bursts) {
+    // gold stars flying out where a MEGA germ was made
+    const k = b.t / 1.4;
+    ctx.fillStyle = `rgba(255,220,90,${1 - k})`;
+    for (let i = 0; i < 14; i++) {
+      const a = i / 14 * TAU, d = R * (0.05 + 0.35 * k), x = cx + b.x * R + Math.cos(a) * d, y = cy + b.y * R + Math.sin(a) * d, s = R * 0.025 * (1 - k * 0.5);
+      ctx.beginPath(); ctx.moveTo(x, y - s * 2); ctx.lineTo(x + s * 0.6, y); ctx.lineTo(x, y + s * 2); ctx.lineTo(x - s * 0.6, y); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // noise meter
+  const mx = W * 0.86, mw = Math.max(26, W * 0.028), mt = H * 0.18, mh = H * 0.56;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.roundRect(mx, mt, mw, mh, mw / 2); ctx.fill();
+  const fh = mh * clamp(lvl / 100, 0, 1);
+  ctx.fillStyle = startled ? '#ff5f6d' : lvl > S.settings.goal ? '#ffb347' : '#5fe08a';
+  ctx.save(); ctx.beginPath(); ctx.roundRect(mx, mt, mw, mh, mw / 2); ctx.clip();
+  ctx.fillRect(mx, mt + mh - fh, mw, fh); ctx.restore();
+  const gy = mt + mh * (1 - S.settings.goal / 100);
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(mx - 12, gy); ctx.lineTo(mx + mw + 12, gy); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = `bold ${Math.round(H * 0.026)}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.fillText('Noise', mx + mw / 2, mt - H * 0.025);
+
+  const font = getComputedStyle(document.body).fontFamily;
+  // title and stats
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#b8f5c8'; ctx.font = `bold ${Math.round(H * 0.055)}px ${font}`;
+  ctx.fillText('Germ Jar', W * 0.03, H * 0.09);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(H * 0.026)}px ${font}`;
+  ctx.fillText(`Calm today: ${Math.floor(S.today.secs / 60)} min`, W * 0.03, H * 0.18);
+  ctx.fillStyle = '#ffd88a'; ctx.font = `bold ${Math.round(H * 0.034)}px ${font}`;
+  ctx.fillText(player() ? player().name : '', W * 0.03, H * 0.14);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(H * 0.026)}px ${font}`;
+  ctx.fillText(`Germs: ${units()} / ${CAP}`, W * 0.03, H * 0.22);
+
+  // what's in the jar right now, rarest first
+  const tally = {};
+  for (const g of G) { const e = tally[g.type] || (tally[g.type] = {n:0, m:0}); if (g.mega) e.m++; else e.n++; }
+  const rows = Object.entries(tally).sort((a, b) => RANK.indexOf(BY_ID[b[0]].rarity) - RANK.indexOf(BY_ID[a[0]].rarity)
+    || (b[1].n + 3 * b[1].m) - (a[1].n + 3 * a[1].m));
+  const lx = W * 0.03, rh = Math.min(H * 0.046, 44), top = H * 0.3, colW = Math.max(120, cx - R * 1.12 - lx);
+  const fit = Math.max(1, Math.floor((H * 0.74 - top) / rh)), shown = rows.length > fit ? rows.slice(0, fit - 1) : rows;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = `bold ${Math.round(rh * 0.42)}px ${font}`;
+  ctx.fillText('In the jar', lx, top - rh * 0.55);
+  shown.forEach(([type, e], i) => {
+    const T = BY_ID[type], y = top + i * rh + rh / 2;
+    drawGerm(ctx, lx + rh * 0.4, y, rh * 0.32, type, t, {phase:1, mega:e.m > 0});
+    ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(rh * 0.48)}px ${font}`;
+    const count = `${e.n + e.m}`;
+    ctx.fillText(count, lx + rh * 0.95, y);
+    const nx = lx + rh * 0.95 + ctx.measureText('00').width + rh * 0.2;
+    ctx.fillStyle = RARITY_COL[T.rarity]; ctx.font = `${Math.round(rh * 0.46)}px ${font}`;
+    ctx.fillText(T.name + (e.m ? ` (${e.m} MEGA)` : ''), nx, y, lx + colW - nx);
+  });
+  if (shown.length < rows.length) {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = `${Math.round(rh * 0.42)}px ${font}`;
+    ctx.fillText(`+ ${rows.length - shown.length} more kinds`, lx, top + shown.length * rh + rh / 2);
+  }
+  ctx.textBaseline = 'alphabetic';
+
+  // shelf of full jars
+  ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.font = `${Math.round(H * 0.026)}px ${font}`;
+  ctx.fillText(`Full jars: ${S.jars.length}`, W * 0.03, H * 0.80);
+  const jw = Math.max(26, H * 0.045), recent = S.jars.slice(-6);
+  recent.forEach((j, i) => drawJar(ctx, W * 0.03 + jw / 2 + i * jw * 1.3, H * 0.92, jw, j.counts, j.megas));
+
+  // status
+  let msg = 'Shh... the germs are growing';
+  if (!running) msg = '';
+  else if (calib) msg = `Measuring the room... shh for ${Math.ceil(calib.left)} seconds`;
+  else if (celebrate) msg = 'The jar is full! Amazing calm!';
+  else if (paused) msg = 'Paused';
+  else if (!focused()) msg = 'Paused in the background';
+  else if (startled && poppedThisTime) msg = poppedThisTime === 1 ? 'Too loud! A germ popped!' : `Too loud! ${poppedThisTime} germs popped!`;
+  else if (startled) msg = 'Too loud! The germs are hiding';
+  else if (nervous > 0.35) msg = 'Getting noisy... the germs are nervous';
+  ctx.textAlign = 'center'; ctx.fillStyle = startled ? '#ffb0b8' : '#ffffff';
+  ctx.font = `bold ${Math.round(H * 0.042)}px ${font}`;
+  ctx.fillText(msg, cx, cy + R * 1.08 + H * 0.075);
+
+  for (const c of confetti) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.globalAlpha = clamp(c.life, 0, 1);
+    ctx.fillStyle = c.c; ctx.fillRect(-c.s / 2, -c.s / 4, c.s, c.s / 2); ctx.restore();
+  }
+}
+
+// ---------- banner ----------
+const bannerQ = []; let bannerCur = null;
+function banner(text, type, mega) { bannerQ.push({text, type, mega}); if (!bannerCur) nextBanner(); }
+function nextBanner() {
+  bannerCur = bannerQ.shift();
+  if (!bannerCur) { $('banner').classList.remove('show'); return; }
+  $('bannerText').textContent = bannerCur.text;
+  $('banner').classList.add('show');
+  bannerCur.until = performance.now() + 4000;
+}
+const bctx = $('bannerGerm').getContext('2d');
+function drawBanner(now) {
+  if (!bannerCur) return;
+  if (now > bannerCur.until) { $('banner').classList.remove('show'); bannerCur = null; setTimeout(nextBanner, 600); return; }
+  bctx.clearRect(0, 0, 160, 160);
+  drawGerm(bctx, 80, 88, bannerCur.mega ? 40 : 48, bannerCur.type, t, {phase:1, mega:bannerCur.mega});
+}
+
+// ---------- settings and collection ----------
+function syncSettings() {
+  const st = S.settings;
+  document.querySelectorAll('#segGoal button').forEach(b => b.classList.toggle('on', b.dataset.p === st.preset));
+  document.querySelectorAll('#segPace button').forEach(b => b.classList.toggle('on', +b.dataset.s === st.pace));
+  document.querySelectorAll('#segLoud button').forEach(b => b.classList.toggle('on', b.dataset.l === st.loud));
+  $('goalRange').value = st.goal;
+  $('bdaySel').value = st.birthday || 0;
+  $('lockText').textContent = lockHash ? 'Settings are locked. Making a new player needs the password too.' : 'No password yet, so anyone can open Settings.';
+  $('bClearPin').classList.toggle('hidden', !lockHash);
+  $('bSetPin').textContent = lockHash ? 'Change password' : 'Set password';
+  $('pinPlayRow').classList.toggle('hidden', !lockHash);
+  $('pinPlayChk').checked = !!(player() && player().locked);
+  $('playerText').textContent = `Playing as ${player() ? player().name : ''}. Each player has their own germs, jars, collection and settings.`;
+  $('soundChk').checked = st.sound;
+  const fill = (CAP - 1) * st.pace;
+  $('paceText').textContent = fill < 120 ? `About ${Math.round(fill)} seconds of calm fills a jar. Only for testing.`
+    : `About ${Math.round(fill / 60)} minutes of calm fills a jar.`;
+}
+document.querySelectorAll('#segGoal button').forEach(b => b.onclick = () => {
+  S.settings.preset = b.dataset.p;
+  S.settings.goal = Math.round(clamp(S.settings.base + OFFSETS[b.dataset.p], 5, 95));
+  syncSettings(); save();
+});
+document.querySelectorAll('#segPace button').forEach(b => b.onclick = () => { S.settings.pace = +b.dataset.s; syncSettings(); save(); });
+document.querySelectorAll('#segLoud button').forEach(b => b.onclick = () => { S.settings.loud = b.dataset.l; syncSettings(); save(); });
+$('goalRange').oninput = e => { S.settings.goal = +e.target.value; S.settings.preset = ''; syncSettings(); save(); };
+$('soundChk').onchange = e => { S.settings.sound = e.target.checked; save(); };
+$('micSel').onchange = async e => { S.settings.deviceId = e.target.value; save(); try { await startMic(); } catch (err) {} };
+$('bCalib').onclick = () => beginCalib(false);
+$('bNewJar').onclick = () => { if (confirm('Empty this jar and start a new one? The collection is kept.')) newJar(); };
+$('bdaySel').innerHTML = '<option value="0">Not set</option>' + MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+$('bdaySel').onchange = e => { S.settings.birthday = +e.target.value; save(); };
+$('bReset').onclick = () => {
+  if (!confirm(`Reset ${player().name}? This empties their jar and clears their full jars and collection.`)) return;
+  S = fresh(S.settings); G = [makeGerm('blob', 0, 0)]; celebrate = null; merge = null; save();
+};
+$('bDelete').onclick = () => {
+  if (!confirm(`Delete ${player().name} and all their germs, jars and collection? This can't be undone.`)) return;
+  store('germjar.p.' + P.current, null);
+  P.list = P.list.filter(x => x.id !== P.current);
+  if (P.list.length) usePlayer(P.list[0].id); else { P.current = null; store(PKEY, P); G = []; }
+  showPlayers();
+};
+$('bRename').onclick = () => {
+  const name = (prompt('New name?', player().name) || '').trim();
+  if (name) { player().name = name.slice(0, 20); store(PKEY, P); syncSettings(); }
+};
+$('bSwitch').onclick = () => { save(); showPlayers(); };
+document.querySelectorAll('.overlay .close').forEach(b => b.onclick = () => b.closest('.overlay').classList.add('hidden'));
+
+// ---------- password ----------
+// One password for the whole game, kept as a hash. It keeps small hands out of Settings; it isn't real security.
+const LOCK_KEY = 'germjar.lock';
+let lockHash = DEMO ? null : fetchJSON(LOCK_KEY);
+async function hashPin(pin) {
+  const data = new TextEncoder().encode('germjar:' + pin);
+  if (!crypto.subtle) return 'plain:' + pin;
+  const h = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function askPin(title, msg = '') {
+  return new Promise(resolve => {
+    $('pinTitle').textContent = title; $('pinMsg').textContent = msg; $('pinInput').value = '';
+    $('pinBox').classList.remove('hidden'); $('pinInput').focus();
+    const done = v => { $('pinBox').classList.add('hidden'); $('pinOk').onclick = $('pinCancel').onclick = $('pinInput').onkeydown = null; resolve(v); };
+    $('pinOk').onclick = () => done($('pinInput').value);
+    $('pinCancel').onclick = () => done(null);
+    $('pinInput').onkeydown = e => { if (e.key === 'Enter') done($('pinInput').value); if (e.key === 'Escape') done(null); e.stopPropagation(); };
+  });
+}
+async function unlock(title = 'Grown-ups only: password please') {
+  if (!lockHash) return true;
+  let msg = '';
+  for (;;) {
+    const pin = await askPin(title, msg);
+    if (pin === null) return false;
+    if (await hashPin(pin) === lockHash) return true;
+    msg = 'Not quite. Try again.';
+  }
+}
+$('bSetPin').onclick = async () => {
+  const a = await askPin(lockHash ? 'Choose a new password' : 'Choose a password');
+  if (!a) return;
+  const b = await askPin('Type it again');
+  if (b === null) return;
+  if (a !== b) { await askPin("Those didn't match, so nothing changed", 'Press OK and try again.'); return; }
+  lockHash = await hashPin(a); store(LOCK_KEY, lockHash); syncSettings();
+};
+$('bClearPin').onclick = () => {
+  if (!confirm('Remove the password? Anyone will be able to open Settings.')) return;
+  lockHash = null; store(LOCK_KEY, null); P.list.forEach(x => delete x.locked); store(PKEY, P); syncSettings();
+};
+$('pinPlayChk').onchange = e => { player().locked = e.target.checked; store(PKEY, P); };
+
+async function openSettings() {
+  if (!(await unlock())) return;
+  syncSettings(); fillMics(); $('settings').classList.remove('hidden'); toTop('settings');
+}
+const RARITY_COL = {common:'#cfe3ff', uncommon:'#7fe0a0', rare:'#6fc3ff', epic:'#ff7fd0', legendary:'#ffd23f', mythic:'#c79bff'};
+function openCollection() {
+  const grid = $('grid'); grid.innerHTML = '';
+  const groups = [['All year', TYPES.filter(T => !T.season)]];
+  for (const name of [...new Set(TYPES.filter(T => T.season).map(T => T.season))]) groups.push([name, TYPES.filter(T => T.season === name)]);
+  for (const [name, list] of groups) {
+    const ms = list[0].months ? monthsOf(list[0]) : null;
+    const when = !ms ? '' : ms.length ? ` (only in ${ms.map(m => MONTHS[m - 1]).join(' and ')})` : ' (set a birthday month in Settings)';
+    const got = list.filter(T => S.found[T.id]).length;
+    grid.insertAdjacentHTML('beforeend', `<h3 class="ghead">${name}${when}: ${got} of ${list.length} found</h3>`);
+    for (const T of list) {
+      const n = S.found[T.id] || 0;
+      const card = document.createElement('div'); card.className = 'germcard';
+      const c = document.createElement('canvas'); c.width = 240; c.height = 240;
+      drawGerm(c.getContext('2d'), 120, 136, S.megas[T.id] ? 56 : 66, T.id, 1, {phase:1, silhouette:!n, mega:!!(n && S.megas[T.id])});
+      card.appendChild(c);
+      const mega = S.megas[T.id] ? ` · ${S.megas[T.id]} MEGA` : '';
+      const note = n ? ` · seen ${n}${mega}` : (inSeason(T) || !monthsOf(T).length ? '' : ` · comes back in ${MONTHS[monthsOf(T)[0] - 1]}`);
+      card.insertAdjacentHTML('beforeend', `<div class="nm">${n ? T.name : '???'}</div><div class="rar" style="color:${RARITY_COL[T.rarity]}">${T.rarity[0].toUpperCase() + T.rarity.slice(1)}${note}</div>`);
+      grid.appendChild(card);
+    }
+  }
+  const found = TYPES.filter(T => S.found[T.id]).length, mins = Math.floor(S.calmTotal / 60);
+  $('collStats').textContent = `Found ${found} of ${TYPES.length} germs. Full jars: ${S.jars.length}. Total calm time: ${Math.floor(mins / 60)} h ${mins % 60} min. ` +
+    'Three germs of the same kind that stay safe for long enough join into one MEGA germ.';
+  $('collection').classList.remove('hidden'); toTop('collection');
+}
+const niceDate = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+const RANK = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+function openShelf() {
+  const grid = $('shelfGrid'); grid.innerHTML = '';
+  S.jars.forEach((j, i) => {
+    const b = document.createElement('button'); b.className = 'jarcard';
+    const c = document.createElement('canvas'); c.width = 180; c.height = 220;
+    drawJar(c.getContext('2d'), 90, 205, 120, j.counts, j.megas);
+    b.appendChild(c);
+    b.insertAdjacentHTML('beforeend', `<div class="nm">Jar ${i + 1}</div><div class="dt">${niceDate(j.date)}</div>`);
+    b.onclick = () => openJar(i);
+    grid.appendChild(b);
+  });
+  $('shelfStats').textContent = S.jars.length ? `${S.jars.length} full jar${S.jars.length > 1 ? 's' : ''}. Click one to look inside.` : 'No full jars yet. Keep it calm to fill the first one!';
+  $('jarView').classList.add('hidden');
+  $('shelf').classList.remove('hidden'); toTop('shelf');
+}
+let view = null;
+function openJar(i) {
+  const j = S.jars[i], germs = [];
+  const megas = j.megas || {};
+  for (const [list, mega] of [[j.counts, false], [megas, true]])
+    for (const [type, n] of Object.entries(list)) for (let k = 0; k < n; k++) { const [x, y] = randomSpot(); const g = makeGerm(BY_ID[type] ? type : 'blob', x, y); g.mega = mega; germs.push(g); }
+  view = {germs};
+  const size = Math.min(0.3, Math.sqrt(0.52 / Math.max(unitsOf(germs), 1)));
+  for (let k = 0; k < 240; k++) stepGerms(germs, 1 / 60, size, {growing:true, hide:0, dance:false});
+  $('jvTitle').textContent = `Jar ${i + 1}, filled ${niceDate(j.date)}`;
+  const tally = $('jvTally'); tally.innerHTML = '';
+  [...new Set([...Object.keys(j.counts), ...Object.keys(megas)])].filter(type => BY_ID[type]).map(type => [type, j.counts[type] || 0])
+    .sort((a, b) => RANK.indexOf(BY_ID[b[0]].rarity) - RANK.indexOf(BY_ID[a[0]].rarity) || (megas[b[0]] || 0) - (megas[a[0]] || 0) || b[1] - a[1])
+    .forEach(([type, n]) => {
+      const T = BY_ID[type], row = document.createElement('div'); row.className = 'tally';
+      const c = document.createElement('canvas'); c.width = 88; c.height = 88;
+      drawGerm(c.getContext('2d'), 44, 48, 28, type, 1, {phase:1});
+      row.appendChild(c);
+      row.insertAdjacentHTML('beforeend', `<div>${T.name} <span style="color:${RARITY_COL[T.rarity]};font-size:.8rem">${T.rarity}</span></div><div class="cnt">${n}${megas[type] ? ` + ${megas[type]} MEGA` : ''}</div>`);
+      tally.appendChild(row);
+    });
+  $('shelf').classList.add('hidden');
+  $('jarView').classList.remove('hidden'); toTop('jarView');
+  const cv2 = $('jvCanvas'), px = cv2.clientWidth * DPR;
+  cv2.width = px; cv2.height = px;
+}
+function drawView(dt) {
+  if (!view || $('jarView').classList.contains('hidden')) return;
+  stepGerms(view.germs, dt, Math.min(0.3, Math.sqrt(0.52 / Math.max(unitsOf(view.germs), 1))), {growing:true, hide:0, dance:false});
+  const c = $('jvCanvas').getContext('2d'), w = $('jvCanvas').width, R = w * 0.46;
+  c.clearRect(0, 0, w, w);
+  drawDish(c, w / 2, w / 2, R);
+  for (const g of view.germs) drawGerm(c, w / 2 + g.x * R, w / 2 + g.y * R, g.r * R, g.type, t, {phase:g.phase, blink:g.blink, look:g.look, mega:g.mega});
+}
+$('jvBack').onclick = openShelf;
+$('bJars').onclick = openShelf;
+cv.addEventListener('click', e => {
+  // clicking the little jars in the corner opens the shelf
+  if (running && e.clientX < W * 0.3 && e.clientY > H * 0.76) openShelf();
+});
+$('bSettings').onclick = openSettings;
+$('bCollection').onclick = openCollection;
+$('bPause').onclick = () => { paused = !paused; $('bPause').textContent = paused ? 'Resume' : 'Pause'; };
+const toggleFull = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+$('bFull').onclick = toggleFull;
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.overlay:not(#start):not(#pinBox)').forEach(o => o.classList.add('hidden'));
+  if (!running || modalOpen()) return;
+  if (e.key === ' ') { e.preventDefault(); $('bPause').click(); }
+  if (e.key === 'f') toggleFull();
+  if (e.key === 'c') openCollection();
+  if (e.key === 'j') openShelf();
+  if (e.key === 's') openSettings();
+});
+
+// ---------- start ----------
+let wake = null;
+async function keepAwake() { try { wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (running && document.visibilityState === 'visible') keepAwake(); });
+function showPlayers() {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.add('hidden'));
+  running = false;
+  const box = $('players'); box.innerHTML = '';
+  for (const pl of P.list) {
+    const sv = pl.id === P.current ? S : loadSave(pl.id);
+    const b = document.createElement('button');
+    b.textContent = pl.name;
+    const sm = document.createElement('small');
+    const found = sv ? TYPES.filter(T => sv.found[T.id]).length : 0, jars = sv ? sv.jars.length : 0;
+    sm.textContent = `${jars} full jar${jars === 1 ? '' : 's'}, ${found} germs found`;
+    b.appendChild(sm);
+    if (pl.locked && lockHash) b.textContent = pl.name + ' \u{1F512}', b.appendChild(sm);
+    b.onclick = async () => {
+      if (pl.locked && lockHash && !(await unlock(`Password to play as ${pl.name}`))) return;
+      if (pl.id !== P.current) usePlayer(pl.id);
+      start();
+    };
+    box.appendChild(b);
+  }
+  $('whoText').textContent = P.list.length ? "Who's playing?" : 'Make a player to start';
+  $('start').classList.remove('hidden');
+}
+$('bNewPlayer').onclick = async () => {
+  if (!(await unlock('Password to make a new player'))) return;
+  const name = (prompt("What's the new player's name?") || '').trim();
+  if (!name) return;
+  save();
+  const id = 'p' + Date.now();
+  P.list.push({id, name:name.slice(0, 20)});
+  usePlayer(id);
+  save();
+  start();
+};
+async function start() {
+  if (!DEMO && !navigator.mediaDevices) {
+    // Chrome only allows the mic on https or localhost pages
+    $('startErr').innerHTML = `Chrome is blocking the microphone because this page isn't secure.
+      Open it at <b>https://${location.host}</b> instead.`;
+    return;
+  }
+  try { await startMic(); }
+  catch (e) { $('startErr').textContent = `Could not use the microphone (${e.message}). Check a mic is plugged in and allowed for this page.`; return; }
+  $('start').classList.add('hidden');
+  running = true;
+  keepAwake(); fillMics();
+  if (!S.settings.calibrated) beginCalib(true);
+  else S.splitProg = Math.max(S.splitProg, S.settings.pace * 0.6);
+}
+if (player()) usePlayer(P.current);
+if (DEMO) {
+  const pool = params.has('all') ? TYPES : TYPES.slice(0, 9);
+  if (!params.has('fresh')) for (let i = 0; i < 37; i++) { const [x, y] = randomSpot(); G.push(makeGerm(pool[i % pool.length].id, x, y)); }
+  if (params.has('all')) TYPES.forEach(T => S.found[T.id] = 1);
+  if (params.has('megas')) TYPES.slice(0, 12).forEach(T => S.megas[T.id] = 1);
+  // ?sim=N runs N seconds of game time up front, for testing without waiting
+  start().then(() => {
+    for (let i = 0, n = (+params.get('sim') || 0) * 60; i < n; i++) { t += 1 / 60; update(1 / 60); }
+    if (params.get('open') === 'collection') openCollection();
+    if (params.get('open') === 'settings') openSettings();
+    if (params.get('open') === 'shelf') openShelf();
+    if (params.get('open') === 'jar' && S.jars.length) openJar(S.jars.length - 1);
+  });
+} else showPlayers();
+
+let lastMove = performance.now();
+addEventListener('mousemove', () => lastMove = performance.now());
+addEventListener('beforeunload', save);
+setInterval(save, 5000);
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
+  update(dt); draw(); drawBanner(now); drawView(dt);
+  const idle = now - lastMove > 4000 && !modalOpen() && running;
+  $('bar').classList.toggle('hide', idle);
+  document.body.classList.toggle('nocursor', idle);
+  if (!$('settings').classList.contains('hidden')) {
+    $('liveFill').style.width = `${lvl}%`;
+    $('liveFill').style.background = lvl > S.settings.goal ? '#ffb347' : '#3fae6a';
+    $('liveGoal').style.left = `${S.settings.goal}%`;
+    $('liveText').textContent = `Room now ${Math.round(lvl)}, goal ${S.settings.goal}`;
+    $('calibText').textContent = calib ? `Measuring... ${Math.ceil(calib.left)}` : `Quiet room measured at ${S.settings.base}`;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
