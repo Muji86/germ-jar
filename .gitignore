@@ -3,3 +3,7 @@
 PI_SETUP.md
 germ-jar-ca.crt
 .DS_Store
+
+# Firebase CLI
+.firebase/
+firebase-debug.log

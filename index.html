@@ -17,6 +17,9 @@
   button.big{font-size:2rem;padding:.5em 2em;background:#3fae6a;margin:.5em 0}
   button.big:hover{background:#4fc77c}
   button.danger{background:#8a3346}
+  button:disabled{opacity:.45;cursor:default}
+  #aPlayers .row{display:flex;align-items:center;gap:.8rem;padding:.35rem 0;border-bottom:1px solid #22395a}
+  #aPlayers .row .nm{font-weight:bold;flex:1}
   #players{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin:.6rem 0 1rem}
   #players button{font-size:1.7rem;padding:.35em 1.3em;background:#3fae6a;line-height:1.15}
   #players button:hover{background:#4fc77c}
@@ -82,6 +85,21 @@
   #banner.show{opacity:1;transform:translate(-50%,0)}
   #banner canvas{width:80px;height:80px}
   #bannerText{font-size:1.8rem;font-weight:bold}
+  #net{position:fixed;top:.8rem;right:1rem;z-index:6;font-size:.85rem;background:rgba(20,38,61,.9);
+    padding:.35em .9em;border-radius:999px;pointer-events:none}
+  #net.ok{color:#9ff0b6}
+  #tvJoin{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;background:#14263d;
+    border-radius:28px;padding:2rem;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);transition:all .6s}
+  #tvQR{background:#fff;padding:1rem;border-radius:16px;display:inline-block;line-height:0}
+  #tvQR img,#tvQR canvas{width:min(40vh,60vw);height:min(40vh,60vw)}
+  #tvCode{font-size:3rem;font-weight:bold;letter-spacing:.25em;margin:.6rem 0 0;color:#ffd88a}
+  #tvHow{font-size:1.4rem;opacity:.85}
+  #tvJoin.corner{left:auto;top:auto;right:1.2vw;bottom:1.2vw;transform:none;padding:.7rem;border-radius:18px}
+  #tvJoin.corner #tvQR{padding:.4rem;border-radius:10px}
+  #tvJoin.corner #tvQR img,#tvJoin.corner #tvQR canvas{width:12vh;height:12vh}
+  #tvJoin.corner #tvCode{font-size:1.1rem;margin:.3rem 0 0}
+  #tvJoin.corner #tvHow,#tvJoin.corner #tvAdmin{display:none}
+  #tvAdmin{white-space:pre-line;margin-top:.6rem;max-width:22rem;margin-left:auto;margin-right:auto}
 </style>
 </head>
 <body>
@@ -94,7 +112,66 @@
   <button id="bCollection">Collection</button>
   <button id="bJars">Jars</button>
   <button id="bSettings">Settings</button>
+  <button id="bAdminPw" class="hidden">Reset admin password</button>
   <button id="bFull">Full screen</button>
+</div>
+
+<div id="net" class="hidden"></div>
+<div id="tvJoin" class="hidden">
+  <div id="tvQR"></div>
+  <div id="tvCode"></div>
+  <div id="tvHow">Scan with a phone or tablet to join</div>
+  <div id="tvAdmin" class="small"></div>
+</div>
+
+<div id="admin" class="overlay hidden">
+  <div class="card wide">
+    <h2>Grown-up controls</h2>
+    <p id="adminRoom" class="small"></p>
+    <div id="adminLogin">
+      <p id="adminHow">Connecting...</p>
+      <button id="bAdminLogin" class="on hidden">Enter password</button>
+      <button id="bAdminSetup" class="on hidden">Choose a password</button>
+    </div>
+    <p id="adminErr" class="err"></p>
+    <div id="adminPanel" class="hidden">
+      <section>
+        <h3>How quiet does it need to be?</h3>
+        <div class="seg" id="aGoal">
+          <button data-v="whisper">Whisper</button>
+          <button data-v="calm">Calm</button>
+          <button data-v="chatty">Chatty</button>
+        </div>
+        <p class="small">Each phone measures its own quiet room and this is added on top, so phones with different mics are fair.</p>
+      </section>
+      <section>
+        <h3>How fast do the germs grow?</h3>
+        <div class="seg" id="aPace">
+          <button data-v="40">Slow</button>
+          <button data-v="20">Normal</button>
+          <button data-v="10">Fast</button>
+          <button data-v="1">Test (super fast)</button>
+        </div>
+      </section>
+      <section>
+        <h3>What happens when it gets too loud?</h3>
+        <div class="seg" id="aLoud">
+          <button data-v="pop">Germs pop</button>
+          <button data-v="hide">Germs just hide</button>
+        </div>
+      </section>
+      <section>
+        <button id="bPauseAll">Pause everyone</button>
+      </section>
+      <section>
+        <button id="bAdminChange">Change the admin password</button>
+      </section>
+      <section>
+        <h3>Players</h3>
+        <div id="aPlayers"></div>
+      </section>
+    </div>
+  </div>
 </div>
 
 <div id="start" class="overlay">
@@ -105,6 +182,7 @@
     <h3 id="whoText">Who's playing?</h3>
     <div id="players"></div>
     <button id="bNewPlayer">+ New player</button>
+    <button id="bAdminLink" class="hidden">Grown-up controls</button>
     <p class="small">The browser will ask to use the microphone. It only listens for how loud the room is.
        Nothing is recorded or sent anywhere.</p>
     <p id="startErr" class="err"></p>
@@ -115,6 +193,8 @@
   <div class="card wide">
     <button class="close x" aria-label="Close">&#x2715;</button>
     <h2>Settings</h2>
+    <p id="roomNote" class="small hidden">The grown-up running the TV sets how quiet it needs to be, how fast the germs grow and
+      what happens when it's too loud. Measuring the room still works here.</p>
     <section>
       <h3>Player</h3>
       <p id="playerText" class="small"></p>
@@ -230,6 +310,11 @@ const KEY = 'germjar.v1';
 const OFFSETS = {whisper: 6, calm: 12, chatty: 22};
 const params = new URLSearchParams(location.search);
 const DEMO = params.has('demo');
+// Playing together: ?tv shows everyone's dishes on a TV, ?join=CODE on a phone plays one player's jar in that room
+const TV = params.has('tv');
+const roomParam = k => (params.get(k) || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
+const ROOM = roomParam('join');
+const ADMIN = roomParam('admin');   // ?admin=CODE: the grown-up's controls for that room
 
 const TYPES = [
   {id:'blob',    name:'Blobby',      hue:125, rarity:'common',     w:30},
@@ -313,7 +398,8 @@ if (DEMO) { S.settings.calibrated = true; S.settings.pace = 1.2; }
 function save() {
   if (DEMO || !player()) return;
   S.germs = G.map(g => ({type:g.type, age:Math.round(g.age), mega:g.mega ? 1 : 0}));
-  store('germjar.p.' + P.current, S);
+  // settings a TV room's grown-up chose only last while in that room, so save the player's own
+  store('germjar.p.' + P.current, roomOwn ? {...S, settings:{...S.settings, ...roomOwn}} : S);
 }
 
 // ---------- germs ----------
@@ -331,6 +417,8 @@ function usePlayer(id) {
   G = S.germs.map(sg => { const [x, y] = randomSpot(); const g = makeGerm(sg.type, x, y); g.age = sg.age; g.mega = !!sg.mega; return g; });
   if (!G.length) G = [makeGerm('blob', 0, 0)];
   celebrate = null; merge = null; ghosts = []; bursts = []; startled = false; pressure = 0; calib = null;
+  roomOwn = null;
+  if (roomSet) applyRoomSettings(roomSet);
 }
 const unitsOf = list => list.reduce((a, g) => a + (g.mega ? 3 : 1), 0);   // a MEGA germ fills three places in the jar
 const units = () => unitsOf(G);
@@ -360,8 +448,8 @@ function split() {
   const isNew = !S.found[type];
   S.found[type] = (S.found[type] || 0) + 1;
   const T = BY_ID[type];
-  if (isNew) { banner(`New germ found: ${T.name}!`, type); chime(); }
-  else if (mutated && RARE.has(T.rarity)) { banner(`A ${T.name} appeared!`, type); chime(); }
+  if (isNew) { banner(`New germ found: ${T.name}!`, type); chime(); tell('new', type); }
+  else if (mutated && RARE.has(T.rarity)) { banner(`A ${T.name} appeared!`, type); chime(); tell('rare', type); }
   else pop();
   if (units() >= CAP) jarFull();
   save();
@@ -377,6 +465,7 @@ function jarFull() {
   spawnConfetti();
   fanfare();
   banner('The jar is full! Brilliant!', G[0].type);
+  tell('full', G[0].type);
   save();
 }
 function newJar() {
@@ -496,7 +585,7 @@ function stepMerge(dt) {
   S.megas[merge.type] = (S.megas[merge.type] || 0) + 1;
   bursts.push({x:cx, y:cy, t:0});
   banner(first ? `First MEGA ${T.name}! Three joined into one` : `A MEGA ${T.name}! Three joined into one`, merge.type, true);
-  chime();
+  chime(); tell('mega', merge.type);
   merge = null;
   save();
 }
@@ -524,7 +613,7 @@ const toTop = id => { $(id).querySelector('.card').scrollTop = 0; };
 // Clicking the dark area around a panel closes it. The press has to start there too, so a slider
 // drag that ends outside the panel doesn't count.
 document.querySelectorAll('.overlay').forEach(o => {
-  if (o.id === 'start' || o.id === 'pinBox') return;
+  if (o.id === 'start' || o.id === 'pinBox' || o.id === 'admin') return;
   let downOnBackdrop = false;
   o.addEventListener('pointerdown', e => { downOnBackdrop = e.target === o; });
   o.addEventListener('click', e => { if (e.target === o && downOnBackdrop) o.classList.add('hidden'); downOnBackdrop = false; });
@@ -571,7 +660,7 @@ function update(dt) {
   if (S.today.date !== todayStr()) S.today = {date:todayStr(), secs:0};
 
   const goal = S.settings.goal;
-  const active = running && !paused && !calib && !celebrate && !modalOpen() && focused() && listening();
+  const active = running && !paused && !roomPaused && !calib && !celebrate && !modalOpen() && focused() && listening();
   if (active) {
     const over = lvl - goal;
     // Short bangs are ignored: noise has to stay over the goal for a few seconds (quicker if very loud).
@@ -591,7 +680,7 @@ function update(dt) {
       S.splitProg += dt; S.calmTotal += dt; S.today.secs += dt;
       if (S.splitProg >= S.settings.pace) { S.splitProg = 0; split(); }
     }
-  } else if (!running || paused || !focused() || !listening()) { startled = false; pressure = 0; }
+  } else if (!running || paused || roomPaused || !focused() || !listening()) { startled = false; pressure = 0; }
   nervous = startled ? 1 : clamp(pressure / 3, 0, 1);
   hideAmt += ((startled ? 1 : 0) - hideAmt) * (1 - Math.exp(-4 * dt));
 
@@ -1077,17 +1166,14 @@ function layout() {
     status:{y:statusY, size:statusSize, maxW:W - pad * 2}};
 }
 
-function draw() {
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const bg = ctx.createRadialGradient(W * 0.45, H * 0.45, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.8);
-  bg.addColorStop(0, '#173052'); bg.addColorStop(1, '#070f1c');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  const L = layout(), {cx, cy, R} = L, font = getComputedStyle(document.body).fontFamily;
+// One dish with its germs: the progress ring, germs (shaking when nervous, pale when hiding), popped
+// ghosts and MEGA bursts. o is {prog, hide, nervous, startled, ghosts, bursts}.
+function drawJarDish(cx, cy, R, list, o) {
+  const {hide:hideAmt, nervous, startled, ghosts, bursts} = o;
   drawDish(ctx, cx, cy, R);
 
   // progress ring: time until the next split
-  const prog = celebrate ? 1 : clamp(S.splitProg / S.settings.pace, 0, 1);
+  const prog = o.prog;
   ctx.lineCap = 'round'; ctx.lineWidth = R * 0.035;
   ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.arc(cx, cy, R * 1.08, 0, TAU); ctx.stroke();
   ctx.strokeStyle = startled ? 'rgba(160,170,190,0.6)' : nervous > 0.2 ? '#ffb347' : '#5fe08a';
@@ -1095,7 +1181,7 @@ function draw() {
 
   // germs
   ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R * 0.99, 0, TAU); ctx.clip();
-  for (const g of G) {
+  for (const g of list) {
     if (g.splitT > 0 && g.partner) {
       const k = g.splitT / 0.7, mx = (g.x + g.partner.x) / 2, my = (g.y + g.partner.y) / 2;
       ctx.fillStyle = `hsla(${BY_ID[g.type].hue},70%,56%,0.9)`;
@@ -1103,7 +1189,7 @@ function draw() {
     }
   }
   const mood = startled ? 2 : nervous > 0.35 ? 1 : 0;
-  for (const g of G) {
+  for (const g of list) {
     const shake = (hideAmt * 0.07 + nervous * 0.02) * g.r * R;
     const sx = cx + g.x * R + Math.sin(t * 43 + g.phase * 7) * shake;
     const sy = cy + g.y * R + Math.cos(t * 37 + g.phase * 5) * shake;
@@ -1121,6 +1207,16 @@ function draw() {
       ctx.beginPath(); ctx.moveTo(x, y - s * 2); ctx.lineTo(x + s * 0.6, y); ctx.lineTo(x, y + s * 2); ctx.lineTo(x - s * 0.6, y); ctx.closePath(); ctx.fill();
     }
   }
+}
+
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = ctx.createRadialGradient(W * 0.45, H * 0.45, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.8);
+  bg.addColorStop(0, '#173052'); bg.addColorStop(1, '#070f1c');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const L = layout(), {cx, cy, R} = L, font = getComputedStyle(document.body).fontFamily;
+  drawJarDish(cx, cy, R, G, {prog:celebrate ? 1 : clamp(S.splitProg / S.settings.pace, 0, 1), hide:hideAmt, nervous, startled, ghosts, bursts});
 
   // noise meter: down the right side on a wide screen, across the top on a tall one
   const m = L.meter, frac = clamp(lvl / 100, 0, 1), goalFrac = S.settings.goal / 100;
@@ -1189,6 +1285,7 @@ function draw() {
   else if (calib) msg = `Measuring the room... shh for ${Math.ceil(calib.left)} seconds`;
   else if (celebrate) msg = 'The jar is full! Amazing calm!';
   else if (paused) msg = 'Paused';
+  else if (roomPaused) msg = 'Paused by the grown-up';
   else if (!focused()) msg = 'Paused in the background';
   else if (!listening()) msg = 'Tap anywhere to start listening';
   else if (startled && poppedThisTime) msg = poppedThisTime === 1 ? 'Too loud! A germ popped!' : `Too loud! ${poppedThisTime} germs popped!`;
@@ -1240,6 +1337,11 @@ function syncSettings() {
   $('pinPlayChk').checked = !!(player() && player().locked);
   $('playerText').textContent = `Playing as ${player() ? player().name : ''}. Each player has their own germs, jars, collection and settings.`;
   $('soundChk').checked = st.sound;
+  // in a TV room the grown-up's admin page sets these for everyone
+  const set = roomSet || {};
+  [['segGoal', set.preset], ['segPace', set.pace], ['segLoud', set.loud]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach(b => b.disabled = !!v));
+  $('goalRange').disabled = !!set.preset;
+  $('roomNote').classList.toggle('hidden', !roomSet);
   const fill = (CAP - 1) * st.pace;
   $('paceText').textContent = fill < 120 ? `About ${Math.round(fill)} seconds of calm fills a jar. Only for testing.`
     : `About ${Math.round(fill / 60)} minutes of calm fills a jar.`;
@@ -1430,6 +1532,7 @@ $('bPause').onclick = () => { paused = !paused; $('bPause').textContent = paused
 const toggleFull = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
 $('bFull').onclick = toggleFull;
 addEventListener('keydown', e => {
+  if (TV || ADMIN) { if (TV && e.key === 'f') toggleFull(); return; }
   if (e.key === 'Escape') document.querySelectorAll('.overlay:not(#start):not(#pinBox)').forEach(o => o.classList.add('hidden'));
   if (!running || modalOpen()) return;
   if (e.key === ' ') { e.preventDefault(); $('bPause').click(); }
@@ -1438,6 +1541,473 @@ addEventListener('keydown', e => {
   if (e.key === 'j') openShelf();
   if (e.key === 's') openSettings();
 });
+
+// ---------- playing together on a TV ----------
+// The TV (?tv) makes a room and shows a QR code. Each phone (?join=CODE) plays its own jar with its own mic,
+// exactly as it would alone, and sends a small summary (which germs, progress, mood) and events like "new germ
+// found" to rooms/CODE/players/<id> in Firebase. The TV draws a dish per player and moves the germs itself.
+// Progress is only ever saved on the phones.
+const FB = {apiKey:'AIzaSyBjnWPhOtYcVTdK99TIR7pWfMxFX__Wp4U', authDomain:'germ-jar-tv.firebaseapp.com',
+  databaseURL:'https://germ-jar-tv-default-rtdb.firebaseio.com', projectId:'germ-jar-tv', appId:'1:936648091100:web:d62f3b1b324bb703f85b19'};
+const PLAY_URL = 'https://germ-jar-tv.web.app/';   // where the QR code sends phones when the TV page itself isn't on https
+async function loadFirebase() {
+  const v = 'https://www.gstatic.com/firebasejs/11.0.2/firebase-';
+  const [app, auth, db] = await Promise.all(['app', 'auth', 'database'].map(m => import(v + m + '.js')));
+  const a = app.initializeApp(FB);
+  // in demo mode (or with &separate, for testing several TVs) every tab signs in on its own, so one
+  // browser can test a room with several "phones" or screens
+  const au = DEMO || params.has('separate') ? auth.initializeAuth(a, {persistence:auth.inMemoryPersistence}) : auth.getAuth(a);
+  const {user} = await auth.signInAnonymously(au);
+  const d = db.getDatabase(a);
+  return {...db, uid:user.uid, at:path => path ? db.ref(d, path) : db.ref(d)};   // at('') is the top of the database
+}
+function netTag(text, ok) {
+  $('net').textContent = text;
+  $('net').classList.toggle('ok', !!ok);
+  $('net').classList.toggle('hidden', !text);
+}
+
+// --- phone ---
+let net = null, roomUp = false, kicked = false, sent = {}, sentAt = 0, evN = 0, evSent = [];
+// roomSet: settings the room's grown-up chose; roomOwn: this player's own values, put back after
+let roomSet = null, roomOwn = null, roomPaused = false;
+const meRef = () => net.at(`rooms/${ROOM}/players/${net.uid}`);
+const roomTag = () => netTag(kicked ? 'The grown-up took you off the TV' : roomUp ? `On the TV (room ${ROOM})` : `Waiting for the TV (room ${ROOM})`, roomUp && !kicked);
+async function joinRoom() {
+  if (net) return;
+  netTag(`Joining the TV (room ${ROOM})...`);
+  try { net = await loadFirebase(); }
+  catch (e) { netTag(`Couldn't reach the TV (${e.message})`); return; }
+  const fail = e => netTag(`Couldn't reach the TV (${e.message})`);
+  // The TV's room disappears when the TV page closes; when it's back, send everything again
+  net.onValue(net.at(`rooms/${ROOM}/tv`), snap => {
+    roomUp = snap.exists();
+    if (roomUp) { net.onDisconnect(meRef()).remove(); publish(true); }
+    roomTag();
+  }, fail);
+  net.onValue(net.at(`rooms/${ROOM}/kicked/${net.uid}`), snap => {
+    const was = kicked;
+    kicked = snap.exists();
+    if (was && !kicked) publish(true);   // let back in
+    roomTag();
+  }, fail);
+  net.onValue(net.at(`rooms/${ROOM}/settings`), snap => applyRoomSettings(snap.val()), fail);
+  setInterval(() => publish(false), 1000);
+}
+// Noise level is Whisper, Calm or Chatty on top of each phone's own measured quiet room, so different mics stay fair
+function applyRoomSettings(rs) {
+  const st = S.settings;
+  roomSet = rs && (rs.preset || rs.pace || rs.loud) ? rs : null;
+  roomPaused = !!(rs && rs.paused);
+  if (roomSet) {
+    if (!roomOwn) roomOwn = {preset:st.preset, goal:st.goal, pace:st.pace, loud:st.loud};
+    if (rs.preset) { st.preset = rs.preset; st.goal = Math.round(clamp(st.base + OFFSETS[rs.preset], 5, 95)); }
+    if (rs.pace) st.pace = rs.pace;
+    if (rs.loud) st.loud = rs.loud;
+  } else if (roomOwn) { Object.assign(st, roomOwn); roomOwn = null; }
+  syncSettings();
+}
+function summary() {
+  const name = (DEMO && params.get('name')) || (player() ? player().name : 'Player');
+  return {name:name.slice(0, 20), germs:G.map(g => g.type + (g.mega ? '*' : '')).join(','), jars:S.jars.length,
+    prog:Math.round(clamp(S.splitProg / S.settings.pace, 0, 1) * 50) / 50, pace:S.settings.pace,
+    // 0 calm, 1 nervous, 2 too loud (hiding or popping), 3 not playing right now
+    mood:!running || paused || roomPaused || !focused() || !listening() ? 3 : startled ? 2 : nervous > 0.35 ? 1 : 0,
+    party:!!celebrate};
+}
+// Sends what changed since last time, about once a second, plus a heartbeat every 10 seconds
+function publish(full) {
+  if (!net || !roomUp || kicked) return;
+  const s = summary(), ch = {};
+  for (const k in s) if (full || s[k] !== sent[k]) ch[k] = s[k];
+  if (full || performance.now() - sentAt > 10000) ch.seen = Date.now();
+  if (!Object.keys(ch).length) return;
+  sent = s; sentAt = performance.now();
+  if (full) evSent = [];
+  (full ? net.set(meRef(), ch) : net.update(meRef(), ch)).catch(() => {});
+}
+// Events the TV announces. Only the last few are kept; the TV remembers which it has already shown.
+function tell(k, type) {
+  if (!net || !roomUp || kicked) return;
+  publish(false);   // so the TV has the germ that goes with it
+  evN = Math.max(evN + 1, Date.now());
+  const ch = {[`ev/${evN}`]:{k, type}};
+  evSent.push(evN);
+  while (evSent.length > 5) ch[`ev/${evSent.shift()}`] = null;
+  net.update(meRef(), ch).catch(() => {});
+}
+
+// --- TV ---
+const tvPlayers = new Map();
+let tvCode = '';
+const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';   // no I or O, so the code can be read out
+const newCode = () => Array.from({length:5}, () => LETTERS[Math.floor(Math.random() * LETTERS.length)]).join('');
+// The TV remembers the grown-up's settings and removed players, because the room is wiped whenever the TV page closes
+let tvState = fetchJSON('germjar.tvstate') || {}, tvPaused = false, tvOwner = false, tvHasAdmin = false;
+// Several TVs can show the same room: ?tv=CODE opens another screen for room CODE. One TV owns the room;
+// if it's switched off the room goes with it, and another TV in the room makes it again straight away, so
+// the game carries on as long as any TV is on.
+async function startTV() {
+  document.title = 'Germ Jar on the TV';
+  $('start').classList.add('hidden');
+  ['bPause', 'bCollection', 'bJars', 'bSettings'].forEach(id => $(id).classList.add('hidden'));
+  ac = new AudioContext();   // browsers only let it play after a click on the page
+  if (DEMO) { showQR('DEMOS'); fakePlayers(); return; }
+  netTag('Connecting...');
+  let fb;
+  try { fb = await loadFirebase(); }
+  catch (e) { netTag(`Couldn't connect (${e.message})`); return; }
+  const roomData = () => Object.assign({tv:fb.uid, created:Date.now()}, tvState.settings && {settings:tvState.settings}, tvState.kicked && {kicked:tvState.kicked});
+  // A room already owned by another TV is shared rather than replaced. A code this TV remembers is
+  // its own game, so it shares that too; only an unknown, unusable code gets swapped for a new one.
+  const asked = roomParam('tv'), remembered = fetchJSON('germjar.tvroom');
+  let code = asked || remembered || newCode();
+  const owned = async c => (await fb.get(fb.at(`rooms/${c}/tv`))).exists();
+  for (let i = 0; ; i++) {
+    try { await fb.update(fb.at('rooms/' + code), roomData()); break; }
+    catch (e) {
+      if ((code === asked || code === remembered) && await owned(code).catch(() => false)) break;
+      if (i > 5) { netTag(`Couldn't make a room (${e.message})`); return; }
+      code = newCode();
+    }
+  }
+  store('germjar.tvroom', code);
+  tvCode = code;
+  const room = fb.at('rooms/' + code), players = fb.at(`rooms/${code}/players`), secret = fb.at('secrets/' + code);
+  let curTv = null, connected = false;
+  const claim = () => fb.update(room, roomData()).then(() => fb.onDisconnect(room).remove()).catch(() => {});
+  // Whenever the room has no TV, take it over (if two TVs try at once the rules let only the first)
+  fb.onValue(fb.at(`rooms/${code}/tv`), s => {
+    curTv = s.val();
+    tvOwner = curTv === fb.uid;
+    if (!curTv && connected) claim();
+    tvAdminText();
+  });
+  fb.onValue(fb.at('.info/connected'), s => {
+    connected = !!s.val();
+    if (connected && (!curTv || curTv === fb.uid)) claim();
+  });
+  fb.onChildAdded(players, s => tvPlayer(s.key, s.val()));
+  fb.onChildChanged(players, s => tvPlayer(s.key, s.val()));
+  fb.onChildRemoved(players, s => tvGone(s.key));
+  // Remember the grown-up's settings and removed players, to put back if this TV makes the room again.
+  // When the whole room goes these read as empty for a moment, so that's ignored.
+  const keep = (k, v) => setTimeout(() => {
+    if (!v && !curTv) return;
+    if (v) tvState[k] = v; else delete tvState[k];
+    store('germjar.tvstate', tvState);
+  });
+  fb.onValue(fb.at(`rooms/${code}/settings`), s => { const v = s.val(); tvPaused = !!(v && v.paused); keep('settings', v); });
+  fb.onValue(fb.at(`rooms/${code}/kicked`), s => keep('kicked', s.val()));
+  // The admin password is normally chosen on the grown-up controls page from a phone or computer. The
+  // main TV can still reset it, in case a child got there first. It's kept apart from the room, so it
+  // stays when another TV takes over.
+  fb.onValue(fb.at('adminSet/' + code), s => { tvHasAdmin = s.exists(); tvAdminText(); });
+  $('bAdminPw').classList.remove('hidden');
+  $('bAdminPw').onclick = async () => {
+    if (!tvOwner) { await askPin('Reset it on the main TV', 'It\'s the first TV that showed this room. Press OK.'); return; }
+    const a = await askPin('Reset the admin password', 'Usually it\'s set from a phone or computer with the grown-up controls link.');
+    if (!a) return;
+    const b = await askPin('Type it again');
+    if (b === null) return;
+    if (a !== b) { await askPin("Those didn't match, so nothing changed", 'Press OK and try again.'); return; }
+    const h = await hashPin('admin:' + a);
+    fb.update(fb.at(''), {[`secrets/${code}`]:h, [`adminSet/${code}`]:true}).catch(e => netTag(`Couldn't save the password (${e.message})`));
+  };
+  netTag('');
+  showQR(code);
+  tvAdminText();
+}
+function tvAdminText() {
+  const here = location.protocol === 'https:' ? location.host + location.pathname : PLAY_URL.replace('https://', '');
+  $('tvAdmin').textContent = `Settings (grown-ups, on a phone or computer): ${here}?admin=${tvCode}`
+    + (tvHasAdmin ? '' : '\nChoose the admin password there first') + `\nAnother TV: ${here}?tv=${tvCode}`;
+}
+// A player that disappears is kept, hidden, for a little while: when another TV takes over the room
+// everyone comes straight back, and their germs should stay where they were
+function tvGone(id) { const p = tvPlayers.get(id); if (p) p.gone = performance.now(); }
+const tvShown = () => [...tvPlayers.values()].filter(p => !p.gone);
+async function showQR(code) {
+  tvCode = code;
+  const url = `${location.protocol === 'https:' ? location.origin + location.pathname : PLAY_URL}?join=${code}`;
+  $('tvCode').textContent = code;
+  $('tvJoin').classList.remove('hidden');
+  try {
+    if (!window.QRCode) await new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      s.onload = ok; s.onerror = () => fail(new Error('no QR code library'));
+      document.head.appendChild(s);
+    });
+    $('tvQR').innerHTML = '';
+    new QRCode($('tvQR'), {text:url, width:512, height:512, correctLevel:QRCode.CorrectLevel.M});
+  } catch (e) { $('tvQR').style.lineHeight = 'normal'; $('tvQR').style.color = '#000'; $('tvQR').textContent = url; }
+}
+function tvPlayer(id, v) {
+  if (!v || typeof v.germs !== 'string') return;
+  const evs = Object.keys(v.ev || {}).map(Number).sort((a, b) => a - b);
+  let p = tvPlayers.get(id);
+  if (!p) {
+    // events from before the TV saw this player aren't announced
+    p = {id, G:[], ghosts:[], bursts:[], gR:0.3, hide:0, nervous:0, ring:clamp(+v.prog || 0, 0, 1), progAt:0, lastEv:evs.length ? evs[evs.length - 1] : 0};
+    tvPlayers.set(id, p);
+  }
+  const joining = !p.G.length;
+  p.gone = 0;
+  p.name = String(v.name || 'Player').slice(0, 20);
+  const prog = clamp(+v.prog || 0, 0, 1);
+  p.got = performance.now();
+  if (prog !== p.prog) p.progAt = p.got;
+  p.jars = +v.jars || 0; p.prog = prog; p.pace = Math.max(0.5, +v.pace || 20); p.mood = +v.mood || 0; p.party = !!v.party;
+  syncGerms(p, v.germs);
+  if (joining && p.G.length) { banner(`${p.name} joined!`, p.G[0].type); pop(); }
+  for (const n of evs) if (n > p.lastEv) { p.lastEv = n; tvEvent(p, v.ev[n] || {}); }
+}
+// Makes the TV's germs match the phone's list: new ones split off a germ, popped ones float away as ghosts,
+// and three that joined into a MEGA germ meet in the middle with a burst of stars
+function syncGerms(p, str) {
+  const key = g => g.type + (g.mega ? '*' : ''), want = {}, have = {};
+  for (const s of str.split(',').slice(0, CAP)) if (BY_ID[s.replace('*', '')]) want[s] = (want[s] || 0) + 1;
+  for (const g of p.G) (have[key(g)] = have[key(g)] || []).push(g);
+  const first = !p.G.length;
+  let gone = [];
+  for (const [k, list] of Object.entries(have)) {
+    const extra = list.length - (want[k] || 0);
+    if (extra > 0) gone.push(...list.sort((a, b) => a.age - b.age).slice(0, extra));
+  }
+  p.G = p.G.filter(g => !gone.includes(g));
+  for (const g of p.G) if (gone.includes(g.partner)) g.partner = null;
+  for (const [k, n] of Object.entries(want)) {
+    const mega = k.endsWith('*'), type = mega ? k.slice(0, -1) : k;
+    for (let i = (have[k] || []).length; i < n; i++) {
+      let g;
+      if (first) { const [x, y] = randomSpot(); g = makeGerm(type, x, y); }
+      else if (mega) {
+        const three = gone.filter(o => o.type === type && !o.mega).slice(0, 3);
+        gone = gone.filter(o => !three.includes(o));
+        const [x, y] = three.length ? [three.reduce((a, o) => a + o.x, 0) / three.length, three.reduce((a, o) => a + o.y, 0) / three.length] : randomSpot();
+        g = makeGerm(type, x, y);
+        p.bursts.push({x, y, t:0});
+      } else {
+        const pool = p.G.filter(o => !o.mega), same = pool.filter(o => o.type === type), from = same.length ? same : pool;
+        const par = from[Math.floor(Math.random() * from.length)];
+        const a = rand(0, TAU), ux = Math.cos(a), uy = Math.sin(a);
+        if (par) {
+          g = makeGerm(type, par.x + ux * 0.01, par.y + uy * 0.01);
+          g.age = 0; par.age = 0; g.vx = ux * 0.28; g.vy = uy * 0.28; par.vx -= ux * 0.28; par.vy -= uy * 0.28;
+          g.splitT = 0.7; g.partner = par;
+        } else { g = makeGerm(type, 0, 0); g.age = 0; }
+      }
+      g.mega = mega;
+      p.G.push(g);
+    }
+  }
+  // a couple at a time while it's too loud means popped; lots at once is just a new jar starting
+  if (!first && p.mood === 2 && gone.length <= 2) for (const v of gone) p.ghosts.push({x:v.x, y:v.y, r:v.r, type:v.type, phase:v.phase, t:0});
+}
+function tvEvent(p, e) {
+  const T = BY_ID[e.type] || BY_ID.blob;
+  if (e.k === 'full') { banner(`${p.name} filled a jar! Brilliant!`, T.id); fanfare(); spawnConfetti(); return; }
+  if (!['new', 'rare', 'mega'].includes(e.k)) return;
+  chime();
+  if (bannerQ.length > 3) return;   // with lots of players, skip the smaller news rather than fall behind
+  if (e.k === 'new') banner(`${p.name} found a new germ: ${T.name}!`, T.id);
+  else if (e.k === 'rare') banner(`${p.name} got a ${T.name}!`, T.id);
+  else banner(`${p.name} made a MEGA ${T.name}!`, T.id, true);
+}
+// ?tv&demo: pretend players, so the TV screen can be tried without phones
+function fakePlayers() {
+  const fake = ['Ana', 'Ben', 'Cleo'].map((name, i) => ({id:'fake' + i, name, germs:[TYPES[i].id], jars:i, mood:0, prog:0, pace:0.7 / (0.2 + 0.1 * i), n:0}));
+  const send = f => tvPlayer(f.id, {name:f.name, germs:f.germs.join(','), jars:f.jars, prog:Math.min(1, f.prog), pace:f.pace, mood:f.mood, party:false,
+    ev:f.ev ? {[f.n]:f.ev} : {}});
+  fake.forEach(send);
+  setInterval(() => fake.forEach((f, i) => {
+    f.ev = null;
+    f.mood = i === 2 && Math.sin(t / 6) > 0.6 ? 2 : 0;
+    if (f.mood === 2) { if (f.germs.length > 1 && Math.random() < 0.3) f.germs.pop(); }
+    else if ((f.prog += 0.2 + 0.1 * i) >= 1) {
+      f.prog = 0;
+      const type = Math.random() < 0.2 ? TYPES[Math.floor(Math.random() * 14)].id : f.germs[0];
+      f.germs.push(type);
+      if (type !== f.germs[0] && Math.random() < 0.5) f.ev = {k:'new', type};
+      if (f.germs.length >= 20) { f.ev = {k:'full', type:f.germs[0]}; f.germs = [f.germs[0]]; f.jars++; }
+      f.n++;
+    }
+    send(f);
+  }), 700);
+}
+function tvUpdate(dt) {
+  const now = performance.now(), ease = k => 1 - Math.exp(-k * dt);
+  for (const p of tvPlayers.values()) {
+    if (p.gone && now - p.gone > 15000) { tvPlayers.delete(p.id); continue; }
+    // a phone that's gone quiet for half a minute shows as paused until it's back
+    p.away = p.mood === 3 || now - p.got > 30000;
+    p.hide += ((p.mood === 2 ? 1 : 0) - p.hide) * ease(4);
+    p.nervous += ((p.mood === 1 || p.mood === 2 ? 1 : 0) - p.nervous) * ease(4);
+    p.gR += (Math.min(0.3, Math.sqrt(0.52 / Math.max(1, unitsOf(p.G)))) - p.gR) * ease(1.5);
+    stepGerms(p.G, dt, p.gR, {growing:!p.away && p.mood === 0, hide:p.hide, dance:p.party});
+    // Phones only send progress about once a second, so the ring carries on at the phone's speed in
+    // between and eases onto each update; when the phone splits a germ it starts again from empty
+    const est = !p.away && p.mood <= 1 && !p.party && !tvPaused ? Math.min(1, p.prog + (now - p.progAt) / 1000 / p.pace) : p.prog;
+    if (est < p.ring - 0.5) p.ring = est; else p.ring += (est - p.ring) * ease(8);
+    for (const gh of p.ghosts) gh.t += dt;
+    p.ghosts = p.ghosts.filter(gh => gh.t < 3);
+    for (const b of p.bursts) b.t += dt;
+    p.bursts = p.bursts.filter(b => b.t < 1.4);
+  }
+  for (const c of confetti) { c.vy += 600 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt; c.life -= dt; }
+  confetti = confetti.filter(c => c.life > 0);
+  $('tvJoin').classList.toggle('corner', tvShown().length > 0);
+  if (tvCode) netTag(ac.state === 'suspended' ? 'Click anywhere on this page to turn the sounds on' : '');
+}
+function tvDraw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = ctx.createRadialGradient(W * 0.45, H * 0.45, 0, W * 0.45, H * 0.45, Math.max(W, H) * 0.8);
+  bg.addColorStop(0, '#173052'); bg.addColorStop(1, '#070f1c');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const font = getComputedStyle(document.body).fontFamily, list = tvShown(), pad = W * 0.02, top = H * 0.1;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#b8f5c8'; ctx.font = `bold ${Math.round(H * 0.055)}px ${font}`;
+  ctx.fillText('Germ Jar', pad, H * 0.075);
+  if (tvPaused) { ctx.textAlign = 'center'; ctx.fillStyle = '#ffd88a'; ctx.fillText('Paused by the grown-up', W / 2, H * 0.075); ctx.textAlign = 'left'; }
+  if (list.length) {
+    // the grid layout that gives the biggest dishes, leaving a strip on the right for the QR code
+    const aw = W - pad * 2 - H * 0.18, ah = H - top - pad, n = list.length;
+    let best = {R:0};
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols), R = Math.min(aw / cols / 2.4, ah / rows / 2.9);
+      if (R > best.R) best = {R, cols, rows};
+    }
+    const {R, cols, rows} = best, cw = aw / cols, ch = ah / rows;
+    list.forEach((p, i) => {
+      const col = i % cols, row = Math.floor(i / cols);
+      tvDish(p, pad + cw * (col + 0.5), top + ch * row + ch * 0.5 + R * 0.08, R, font);
+    });
+  }
+  for (const c of confetti) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.globalAlpha = clamp(c.life, 0, 1);
+    ctx.fillStyle = c.c; ctx.fillRect(-c.s / 2, -c.s / 4, c.s, c.s / 2); ctx.restore();
+  }
+}
+function tvDish(p, cx, cy, R, font) {
+  ctx.globalAlpha = p.away ? 0.45 : 1;
+  drawJarDish(cx, cy, R, p.G, {prog:p.party ? 1 : p.ring, hide:p.hide, nervous:p.nervous, startled:p.mood === 2, ghosts:p.ghosts, bursts:p.bursts});
+  ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffd88a'; ctx.font = `bold ${Math.round(R * 0.2)}px ${font}`;
+  ctx.fillText(p.name, cx, cy - R * 1.2, R * 2.3);
+  const status = p.away ? 'Paused' : p.party ? 'Jar full!' : p.mood === 2 ? 'Too loud!' : p.mood === 1 ? 'Getting noisy...' : '';
+  const info = `${unitsOf(p.G)} / ${CAP}  ·  ${p.jars} full jar${p.jars === 1 ? '' : 's'}`;
+  ctx.fillStyle = p.mood === 2 && !p.away ? '#ffb0b8' : 'rgba(255,255,255,0.8)'; ctx.font = `${Math.round(R * 0.14)}px ${font}`;
+  ctx.fillText(status ? `${status}  ·  ${info}` : info, cx, cy + R * 1.3, R * 2.3);
+}
+
+// --- grown-up controls (?admin=CODE) ---
+// The admin password typed on the TV is kept, hashed, where nobody can read it. Writing the same hash under
+// admins/CODE/<you> only works if it matches, and the database rules only let a matching admin change the
+// room's settings or remove players.
+if (ROOM) { $('bAdminLink').classList.remove('hidden'); $('bAdminLink').onclick = () => { location.href = `?admin=${ROOM}`; }; }
+async function startAdmin() {
+  document.title = 'Germ Jar grown-up controls';
+  $('start').classList.add('hidden'); $('bar').classList.add('hidden');
+  $('admin').classList.remove('hidden');
+  $('adminRoom').textContent = `Room ${ADMIN}`;
+  let fb;
+  try { fb = await loadFirebase(); }
+  catch (e) { $('adminErr').textContent = `Couldn't connect (${e.message})`; return; }
+  const me = fb.at(`admins/${ADMIN}/${fb.uid}`), KEYA = 'germjar.admin.' + ADMIN;
+  const claim = async h => { try { await fb.set(me, h); return true; } catch (e) { return false; } };
+  const saved = fetchJSON(KEYA);
+  if (saved && await claim(saved)) return adminPanel(fb);
+  // The first grown-up to open this page for a room chooses the password; after that it's needed to get in
+  fb.onValue(fb.at('adminSet/' + ADMIN), s => {
+    const set = s.exists();
+    $('adminHow').textContent = set ? 'Type the admin password for this room.'
+      : 'No admin password yet. Choose one now, so only grown-ups can change the settings.';
+    $('bAdminLogin').classList.toggle('hidden', !set);
+    $('bAdminSetup').classList.toggle('hidden', set);
+  });
+  $('bAdminLogin').onclick = async () => {
+    const pw = await askPin('Admin password');
+    if (!pw) return;
+    const h = await hashPin('admin:' + pw);
+    if (await claim(h)) { store(KEYA, h); adminPanel(fb); }
+    else $('adminErr').textContent = "That's not it. Try again.";
+  };
+  $('bAdminSetup').onclick = async () => { if (await setAdminPassword(fb)) adminPanel(fb); };
+}
+// Choosing the password (or changing it, once in) saves it, makes this phone an admin and marks the room
+// as having one, all in one go. Other grown-ups' phones then need the new password.
+async function setAdminPassword(fb) {
+  const a = await askPin('Choose an admin password', 'Grown-ups type this to change the settings for everyone.');
+  if (!a) return false;
+  const b = await askPin('Type it again');
+  if (b === null) return false;
+  if (a !== b) { $('adminErr').textContent = "Those didn't match, so nothing changed."; return false; }
+  const h = await hashPin('admin:' + a);
+  try {
+    await fb.update(fb.at(''), {[`secrets/${ADMIN}`]:h, [`admins/${ADMIN}/${fb.uid}`]:h, [`adminSet/${ADMIN}`]:true});
+  } catch (e) {
+    const on = (await fb.get(fb.at(`rooms/${ADMIN}/tv`)).catch(() => null))?.exists();
+    // a room whose password was set on the TV before the page could do it has a password but no flag
+    if (on) { $('bAdminLogin').classList.remove('hidden'); $('bAdminSetup').classList.add('hidden'); }
+    $('adminErr').textContent = on ? 'This room already has an admin password. Use "Enter password".' : 'Turn the TV on first, then try again.';
+    return false;
+  }
+  store('germjar.admin.' + ADMIN, h);
+  $('adminErr').textContent = '';
+  return true;
+}
+function adminPanel(fb) {
+  fb.set(fb.at('adminSet/' + ADMIN), true).catch(() => {});
+  $('adminLogin').classList.add('hidden'); $('adminPanel').classList.remove('hidden'); $('adminErr').textContent = '';
+  const room = fb.at('rooms/' + ADMIN);
+  let rs = {}, players = {}, kicked = {}, tvOn = false;
+  // refused while the TV is on means another grown-up changed the password, so ask for the new one
+  const relogin = () => {
+    store('germjar.admin.' + ADMIN, null);
+    $('adminPanel').classList.add('hidden'); $('adminLogin').classList.remove('hidden');
+    $('bAdminLogin').classList.remove('hidden'); $('bAdminSetup').classList.add('hidden');
+    $('adminHow').textContent = 'The admin password was changed. Type the new one.';
+  };
+  const change = ch => fb.update(fb.at(`rooms/${ADMIN}/settings`), ch)
+    .catch(() => { if (tvOn) relogin(); else $('adminErr').textContent = "The TV isn't on right now."; });
+  [['aGoal', 'preset', v => v], ['aPace', 'pace', Number], ['aLoud', 'loud', v => v]].forEach(([id, k, conv]) =>
+    $(id).querySelectorAll('button').forEach(b => b.onclick = () => change({[k]:conv(b.dataset.v)})));
+  $('bPauseAll').onclick = () => change({paused:!rs.paused});
+  $('bAdminChange').onclick = async () => { if (await setAdminPassword(fb)) alert('Done. Other grown-ups will need the new password.'); };
+  const draw = () => {
+    const cur = {preset:'calm', pace:20, loud:'pop', ...rs};
+    [['aGoal', 'preset'], ['aPace', 'pace'], ['aLoud', 'loud']].forEach(([id, k]) =>
+      $(id).querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === String(cur[k]))));
+    $('bPauseAll').textContent = rs.paused ? 'Let everyone carry on' : 'Pause everyone';
+    $('bPauseAll').classList.toggle('on', !!rs.paused);
+    $('adminRoom').textContent = `Room ${ADMIN}` + (tvOn ? '' : ". The TV isn't on right now.")
+      + ` To show it on another TV too, open ${PLAY_URL.replace('https://', '')}?tv=${ADMIN} there.`;
+    const box = $('aPlayers'); box.innerHTML = '';
+    const row = (name, info, label, act, cls) => {
+      const r = document.createElement('div'); r.className = 'row';
+      const n = document.createElement('span'); n.className = 'nm'; n.textContent = name;
+      const i = document.createElement('span'); i.className = 'small'; i.textContent = info;
+      const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; b.onclick = act;
+      r.append(n, i, b); box.appendChild(r);
+    };
+    const MOOD = ['Calm', 'Getting noisy', 'Too loud', 'Paused'];
+    for (const [uid, p] of Object.entries(players)) {
+      const units = String(p.germs || '').split(',').filter(Boolean).reduce((a, g) => a + (g.endsWith('*') ? 3 : 1), 0);
+      row(p.name, `${units} / ${CAP}, ${MOOD[p.mood] || ''}`, 'Remove', () => {
+        if (confirm(`Take ${p.name} off the TV? Their germs stay safe on their phone.`))
+          fb.update(room, {[`kicked/${uid}`]:String(p.name).slice(0, 20), [`players/${uid}`]:null}).catch(relogin);
+      }, 'danger');
+    }
+    for (const [uid, name] of Object.entries(kicked)) row(name, 'Removed', 'Let back in', () => fb.update(room, {[`kicked/${uid}`]:null}).catch(relogin));
+    if (!box.children.length) box.innerHTML = '<p class="small">Nobody has joined yet.</p>';
+  };
+  fb.onValue(fb.at(`rooms/${ADMIN}/tv`), s => { tvOn = s.exists(); draw(); });
+  fb.onValue(fb.at(`rooms/${ADMIN}/settings`), s => { rs = s.val() || {}; draw(); });
+  fb.onValue(fb.at(`rooms/${ADMIN}/players`), s => { players = s.val() || {}; draw(); });
+  fb.onValue(fb.at(`rooms/${ADMIN}/kicked`), s => { kicked = s.val() || {}; draw(); });
+}
 
 // ---------- start ----------
 let wake = null;
@@ -1489,11 +2059,14 @@ async function start() {
   $('start').classList.add('hidden');
   running = true;
   keepAwake(); fillMics();
+  if (ROOM) joinRoom();
   if (!S.settings.calibrated) beginCalib(true);
   else S.splitProg = Math.max(S.splitProg, S.settings.pace * 0.6);
 }
 if (player()) usePlayer(P.current);
-if (DEMO) {
+if (TV) startTV();
+else if (ADMIN) startAdmin();
+else if (DEMO) {
   const pool = params.has('all') ? TYPES : TYPES.slice(0, 9);
   if (!params.has('fresh')) for (let i = 0; i < 37; i++) { const [x, y] = randomSpot(); G.push(makeGerm(pool[i % pool.length].id, x, y)); }
   if (params.has('all')) TYPES.forEach(T => S.found[T.id] = 1);
@@ -1520,8 +2093,9 @@ setInterval(save, 5000);
 let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now; t += dt;
-  update(dt); draw(); drawBanner(now); drawView(dt);
-  const idle = !touchOnly && now - lastMove > 4000 && !modalOpen() && running;
+  if (TV) { tvUpdate(dt); tvDraw(); } else { update(dt); draw(); }
+  drawBanner(now); drawView(dt);
+  const idle = !touchOnly && now - lastMove > 4000 && !modalOpen() && (running || TV);
   $('bar').classList.toggle('hide', idle);
   document.body.classList.toggle('nocursor', idle);
   if (!$('settings').classList.contains('hidden')) {

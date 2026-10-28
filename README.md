@@ -68,6 +68,66 @@ serve the folder locally and open `http://localhost:8000` instead:
 python -m http.server 8000
 ```
 
+## Playing together on a TV
+
+Everyone can play at once, each with their own phone or tablet, while the TV shows all the jars.
+
+1. On the TV, open the game with `?tv` on the end (for example https://germ-jar-tv.web.app/?tv). It
+   shows a QR code and a five-letter room code. The TV doesn't use a microphone.
+2. Each player scans the QR code, picks or makes their player and allows the microphone. Each phone
+   listens to the noise near it, so one loud player only upsets their own germs.
+3. The TV shows a dish for every player, with their name, germs and full jars. New germs, MEGA germs
+   and full jars are announced on the TV with the player's name. Click the TV page once to let it
+   play sounds.
+
+The QR code shrinks into the corner once someone has joined, so more players can join any time. A
+phone that's switched away from the game shows as Paused on the TV. Progress is still saved on each
+phone, the same as playing alone. The TV keeps the same room code between visits, so phones can
+come back with the same link.
+
+### More than one TV
+
+The same game can be on several TVs at once, for example in two rooms. On the extra TV open
+`https://germ-jar-tv.web.app/?tv=CODE` with the room code; the link is on the first TV's join card
+and on the grown-up controls page. Every TV shows every player's dish and the announcements.
+
+The first TV is the main one and owns the room. If it's switched off, another TV in the room takes over
+straight away and the game carries on, keeping the grown-up's settings and removed players. A TV that
+comes back with its usual `?tv` link rejoins the same game as an extra screen. The admin password is
+kept apart from the room, so it carries on working after a takeover.
+
+### Grown-up controls
+
+The settings are changed from a grown-up's phone or computer, never on the TV:
+
+1. Open `https://germ-jar-tv.web.app/?admin=CODE` (the link is on the TV's join card), or scan the QR
+   code and tap **Grown-up controls** on the join page.
+2. The first time, choose an admin password there. After that, grown-ups type it to get in, and each
+   phone or computer remembers it for that room.
+3. From there: how quiet it needs to be (Whisper, Calm or Chatty), how fast germs grow, whether germs
+   pop or just hide when it's too loud, **Pause everyone**, a list of players with **Remove** (and
+   **Let back in**), and **Change the admin password**. After a change, other grown-ups are asked
+   for the new one.
+
+The noise level is applied on top of each phone's own measured quiet room, so phones with different
+microphones stay fair. While a phone is in a room those settings are greyed out in its Settings, and
+its player's own settings come back when it plays on its own. The TV remembers the grown-up's
+choices and removed players between visits.
+
+The password is checked by the database rules: its hash is stored where nobody can read it, it can
+only be chosen when the room has none yet (or changed by someone who knows it), and only a phone that
+has proved it knows it can change settings or remove players. If a child chooses it first, the main
+TV can reset it: move the mouse and click **Reset admin password**.
+
+The phones and TV talk through a Firebase Realtime Database (project `germ-jar-tv`). Each device signs
+in anonymously. A room holds only each player's name and a summary of their jar, the grown-up's settings and who
+was removed, and it's deleted when the TV page closes. Nothing from the microphone is ever sent. The rules are in
+`database.rules.json`; deploy changes with `firebase deploy --only database`.
+
+https://germ-jar-tv.web.app/ is served by Firebase Hosting; publish changes with
+`firebase deploy --only hosting` (only `index.html` is uploaded). When the TV page isn't on https
+(opened as a file or from localhost), the QR code points phones at that copy.
+
 ## Hosting it yourself
 
 The easiest way is the GitHub Pages copy above: it's https, so the microphone just works. To run
@@ -89,3 +149,10 @@ Extra options: `&sim=60` runs 60 seconds of game time straight away, `&loud` mak
 loud, `&open=collection`, `settings`, `shelf` or `jar` opens a panel, `&all` puts every germ type in
 the dish and collection, `&megas` marks MEGA germs as found, `&fresh` starts from one germ,
 `&megaafter=12` changes the MEGA threshold, and `&month=10` pretends it is October.
+
+`index.html?tv&demo` shows the TV screen with three pretend players. To try a real room in one
+browser, open `?tv` in one tab and `?join=CODE&demo&name=Sam` in others (with `&fresh` to start
+from one germ, or `&loud` to watch germs pop); demo tabs each sign in as a separate player. To try several
+TVs in one browser add `&separate` to each TV tab (`?tv&separate`, then `?tv=CODE&separate`) so each
+signs in on its own, as separate TVs would. Background
+tabs pause the game, so bring a phone tab to the front to see it change on the TV.

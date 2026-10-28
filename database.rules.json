@@ -1,0 +1,113 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (data.exists() ? data.child('tv').val() === auth.uid : newData.child('tv').val() === auth.uid)",
+        ".validate": "$code.matches(/^[A-Z]{5}$/) && newData.hasChildren(['tv', 'created'])",
+        "tv": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "created": {
+          ".validate": "newData.isNumber()"
+        },
+        "settings": {
+          ".write": "auth != null && root.child('secrets/' + $code).exists() && root.child('admins/' + $code + '/' + auth.uid).val() === root.child('secrets/' + $code).val()",
+          "preset": {
+            ".validate": "newData.val() === 'whisper' || newData.val() === 'calm' || newData.val() === 'chatty'"
+          },
+          "pace": {
+            ".validate": "newData.val() === 40 || newData.val() === 20 || newData.val() === 10 || newData.val() === 1"
+          },
+          "loud": {
+            ".validate": "newData.val() === 'pop' || newData.val() === 'hide'"
+          },
+          "paused": {
+            ".validate": "newData.isBoolean()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "kicked": {
+          "$uid": {
+            ".write": "auth != null && root.child('secrets/' + $code).exists() && root.child('admins/' + $code + '/' + auth.uid).val() === root.child('secrets/' + $code).val()",
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          }
+        },
+        "players": {
+          "$uid": {
+            ".write": "auth != null && ((auth.uid === $uid && root.child('rooms/' + $code + '/tv').exists() && !root.child('rooms/' + $code + '/kicked/' + $uid).exists()) || (!newData.exists() && root.child('secrets/' + $code).exists() && root.child('admins/' + $code + '/' + auth.uid).val() === root.child('secrets/' + $code).val()))",
+            ".validate": "newData.hasChildren(['name', 'germs'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20"
+            },
+            "germs": {
+              ".validate": "newData.isString() && newData.val().length <= 800"
+            },
+            "jars": {
+              ".validate": "newData.isNumber()"
+            },
+            "prog": {
+              ".validate": "newData.isNumber()"
+            },
+            "mood": {
+              ".validate": "newData.isNumber()"
+            },
+            "party": {
+              ".validate": "newData.isBoolean()"
+            },
+            "seen": {
+              ".validate": "newData.isNumber()"
+            },
+            "pace": {
+              ".validate": "newData.isNumber()"
+            },
+            "ev": {
+              "$n": {
+                ".validate": "newData.hasChildren(['k']) && newData.child('k').isString() && newData.child('k').val().length <= 12 && (!newData.child('type').exists() || (newData.child('type').isString() && newData.child('type').val().length <= 12))",
+                "k": {
+                  ".validate": true
+                },
+                "type": {
+                  ".validate": true
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "secrets": {
+      "$code": {
+        ".write": "auth != null && root.child('rooms/' + $code + '/tv').exists() && (!data.exists() || root.child('rooms/' + $code + '/tv').val() === auth.uid || root.child('admins/' + $code + '/' + auth.uid).val() === data.val())",
+        ".validate": "newData.isString() && newData.val().length === 64"
+      }
+    },
+    "admins": {
+      "$code": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.val() === newData.parent().parent().parent().child('secrets').child($code).val()"
+        }
+      }
+    },
+    "adminSet": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && newData.parent().parent().child('secrets').child($code).exists()",
+        ".validate": "newData.val() === true"
+      }
+    }
+  }
+}
