@@ -790,7 +790,13 @@ function drawGerm(c, x, y, r, typeId, tt, o = {}) {
     fg.addColorStop(0, '#fff3a0'); fg.addColorStop(0.5, '#ffa53a'); fg.addColorStop(1, 'rgba(255,80,40,0)');
     c.fillStyle = fg; c.beginPath(); c.moveTo(-r * 0.3, r * 0.85); c.quadraticCurveTo(0, r * 0.9 + fl * 1.3, r * 0.3, r * 0.85); c.closePath(); c.fill();
   }
-  if (T.glow) { c.shadowColor = `hsla(${hue},100%,70%,${0.95 * (1 - pale)})`; c.shadowBlur = r * (0.9 + 0.4 * Math.sin(tt * 3 + ph)); }
+  // A blurred shadow glows best but is slow, so a TV full of dishes (o.cheapGlow) draws a soft halo instead
+  const glowR = r * (0.9 + 0.4 * Math.sin(tt * 3 + ph));
+  if (T.glow && o.cheapGlow) {
+    const hg = c.createRadialGradient(0, 0, r * 0.7, 0, 0, r + glowR);
+    hg.addColorStop(0, `hsla(${hue},100%,70%,${0.6 * (1 - pale)})`); hg.addColorStop(1, `hsla(${hue},100%,70%,0)`);
+    c.fillStyle = hg; c.beginPath(); c.arc(0, 0, r + glowR, 0, TAU); c.fill();
+  } else if (T.glow) { c.shadowColor = `hsla(${hue},100%,70%,${0.95 * (1 - pale)})`; c.shadowBlur = glowR; }
   const gr = c.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r * 1.1);
   gr.addColorStop(0, col(22)); gr.addColorStop(0.55, col(0)); gr.addColorStop(1, col(-18));
   if (T.rainbow && c.createConicGradient) {
@@ -917,7 +923,7 @@ function drawGerm(c, x, y, r, typeId, tt, o = {}) {
     c.fillStyle = '#d8283c'; c.beginPath(); c.roundRect(-r * 0.68, -r * 0.88, r * 1.36, r * 0.2, r * 0.1); c.fill();
     c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(r * 0.98, -r * 1.33, r * 0.12, 0, TAU); c.fill();
   }
-  if (T.reindeer) { c.save(); c.shadowColor = '#ff3030'; c.shadowBlur = r * 0.5; c.fillStyle = '#ff2a2a'; c.beginPath(); c.arc(0, r * 0.1, r * 0.13, 0, TAU); c.fill(); c.restore(); }
+  if (T.reindeer) { c.save(); if (!o.cheapGlow) { c.shadowColor = '#ff3030'; c.shadowBlur = r * 0.5; } c.fillStyle = '#ff2a2a'; c.beginPath(); c.arc(0, r * 0.1, r * 0.13, 0, TAU); c.fill(); c.restore(); }
   if (T.santa) {
     c.fillStyle = '#d8283c'; c.beginPath(); c.moveTo(-r * 0.7, -r * 0.75);
     c.quadraticCurveTo(-r * 0.1, -r * 1.75, r * 0.95, -r * 1.25); c.quadraticCurveTo(r * 0.4, -r * 1.05, r * 0.7, -r * 0.75); c.closePath(); c.fill();
@@ -1167,7 +1173,7 @@ function layout() {
 }
 
 // One dish with its germs: the progress ring, germs (shaking when nervous, pale when hiding), popped
-// ghosts and MEGA bursts. o is {prog, hide, nervous, startled, ghosts, bursts}.
+// ghosts and MEGA bursts. o is {prog, hide, nervous, startled, ghosts, bursts, cheapGlow}.
 function drawJarDish(cx, cy, R, list, o) {
   const {hide:hideAmt, nervous, startled, ghosts, bursts} = o;
   drawDish(ctx, cx, cy, R);
@@ -1193,7 +1199,7 @@ function drawJarDish(cx, cy, R, list, o) {
     const shake = (hideAmt * 0.07 + nervous * 0.02) * g.r * R;
     const sx = cx + g.x * R + Math.sin(t * 43 + g.phase * 7) * shake;
     const sy = cy + g.y * R + Math.cos(t * 37 + g.phase * 5) * shake;
-    drawGerm(ctx, sx, sy, g.r * R, g.type, t, {phase:g.phase, pale:hideAmt, mood, blink:g.blink, look:g.look, mega:g.mega});
+    drawGerm(ctx, sx, sy, g.r * R, g.type, t, {phase:g.phase, pale:hideAmt, mood, blink:g.blink, look:g.look, mega:g.mega, cheapGlow:o.cheapGlow});
   }
   ctx.restore();
   if (hideAmt > 0.01) { ctx.fillStyle = `rgba(15,25,50,${0.35 * hideAmt})`; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill(); }
@@ -1875,7 +1881,7 @@ function tvDraw() {
     const aw = W - pad * 2 - H * 0.18, ah = H - top - pad, n = list.length;
     let best = {R:0};
     for (let cols = 1; cols <= n; cols++) {
-      const rows = Math.ceil(n / cols), R = Math.min(aw / cols / 2.4, ah / rows / 2.9);
+      const rows = Math.ceil(n / cols), R = Math.min(aw / cols / 2.3, ah / rows / 3);
       if (R > best.R) best = {R, cols, rows};
     }
     const {R, cols, rows} = best, cw = aw / cols, ch = ah / rows;
@@ -1891,15 +1897,15 @@ function tvDraw() {
 }
 function tvDish(p, cx, cy, R, font) {
   ctx.globalAlpha = p.away ? 0.45 : 1;
-  drawJarDish(cx, cy, R, p.G, {prog:p.party ? 1 : p.ring, hide:p.hide, nervous:p.nervous, startled:p.mood === 2, ghosts:p.ghosts, bursts:p.bursts});
+  drawJarDish(cx, cy, R, p.G, {prog:p.party ? 1 : p.ring, hide:p.hide, nervous:p.nervous, startled:p.mood === 2, ghosts:p.ghosts, bursts:p.bursts, cheapGlow:true});
   ctx.globalAlpha = 1;
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#ffd88a'; ctx.font = `bold ${Math.round(R * 0.2)}px ${font}`;
-  ctx.fillText(p.name, cx, cy - R * 1.2, R * 2.3);
+  ctx.fillStyle = '#ffd88a'; ctx.font = `bold ${Math.round(R * 0.25)}px ${font}`;
+  ctx.fillText(p.name, cx, cy - R * 1.22, R * 2.2);
   const status = p.away ? 'Paused' : p.party ? 'Jar full!' : p.mood === 2 ? 'Too loud!' : p.mood === 1 ? 'Getting noisy...' : '';
   const info = `${unitsOf(p.G)} / ${CAP}  ·  ${p.jars} full jar${p.jars === 1 ? '' : 's'}`;
-  ctx.fillStyle = p.mood === 2 && !p.away ? '#ffb0b8' : 'rgba(255,255,255,0.8)'; ctx.font = `${Math.round(R * 0.14)}px ${font}`;
-  ctx.fillText(status ? `${status}  ·  ${info}` : info, cx, cy + R * 1.3, R * 2.3);
+  ctx.fillStyle = p.mood === 2 && !p.away ? '#ffb0b8' : 'rgba(255,255,255,0.8)'; ctx.font = `${Math.round(R * 0.17)}px ${font}`;
+  ctx.fillText(status ? `${status}  ·  ${info}` : info, cx, cy + R * 1.36, R * 2.2);
 }
 
 // --- grown-up controls (?admin=CODE) ---
